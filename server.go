@@ -4,36 +4,6 @@ import (
 	"time"
 )
 
-// AppendEntriesRequest contain the request payload for the AppendEntries RPC
-type AppendEntriesRequest struct {
-	leaderTerm   Term
-	leaderID     NodeName
-	leaderCommit LogIndex
-	prevLogIndex LogIndex
-	prevLogTerm  Term
-	entries      []LogEntry
-}
-
-// AppendEntriesResponse contain the response payload for the AppendEntries RPC
-type AppendEntriesResponse struct {
-	success bool
-	term    Term
-}
-
-// RequestVoteRequest contain the request payload for the RequestVote RPC
-type RequestVoteRequest struct {
-	candidateTerm Term
-	candidateID   NodeName
-	lastLogIndex  LogIndex
-	lastLogTerm   Term
-}
-
-// RequestVoteResponse contain the response payload for the RequestVote RPC
-type RequestVoteResponse struct {
-	term        Term
-	voteGranted bool
-}
-
 type Server interface {
 	// Persisted data
 	//currentTerm() Term
@@ -56,13 +26,14 @@ type serverImpl struct {
 	matchIndex LogIndex
 
 	storage Storage
+	gateway ServerGateway
 
 	mutex                      chan bool
 	leaderElectionTimeout      time.Duration
 	leaderElectionTimeoutTimer *time.Timer
 }
 
-func NewServer(storage Storage, nodeName NodeName, leaderElectionTimeout time.Duration) Server {
+func NewServer(storage Storage, gateway ServerGateway, nodeName NodeName, leaderElectionTimeout time.Duration) Server {
 	mutex := make(chan bool, 1)
 	mutex <- true // add token
 
@@ -74,6 +45,7 @@ func NewServer(storage Storage, nodeName NodeName, leaderElectionTimeout time.Du
 		nextIndex:        0,
 		matchIndex:       0,
 		storage:          storage,
+		gateway:          gateway,
 		mutex:            mutex,
 		leaderElectionTimeout:      leaderElectionTimeout,
 		leaderElectionTimeoutTimer: time.NewTimer(leaderElectionTimeout),
@@ -83,7 +55,7 @@ func NewServer(storage Storage, nodeName NodeName, leaderElectionTimeout time.Du
 func (si *serverImpl) Run() {
 	for {
 		select {
-		case <-si.leaderElectionTimeout.C:
+		case <-si.leaderElectionTimeoutTimer.C:
 			si.handleLeaderElectionTimeout()
 		}
 	}
@@ -101,6 +73,17 @@ func (si *serverImpl) RequestVote(request RequestVoteRequest) RequestVoteRespons
 	si.takeLock()
 	defer si.releaseLock()
 
+	return si.handleRequestVote(request)
+}
+
+func (si *serverImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
+	si.takeLock()
+	defer si.releaseLock()
+
+	return si.handleAppendEntries(request)
+}
+
+func (si *serverImpl) handleRequestVote(request RequestVoteRequest) RequestVoteResponse {
 	currentTerm := si.storage.CurrentTerm()
 
 	if request.candidateTerm > currentTerm {
@@ -148,10 +131,7 @@ func (si *serverImpl) isCandidateLogUpToDate(request RequestVoteRequest) bool {
 	return false // candidate is at older term or has fewer entries
 }
 
-func (si *serverImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
-	si.takeLock()
-	defer si.releaseLock()
-
+func (si *serverImpl) handleAppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
 	currentTerm := si.storage.CurrentTerm()
 
 	if request.leaderTerm > currentTerm {
@@ -244,6 +224,10 @@ func (si *serverImpl) transitionToFollower(newTerm Term) {
 	}
 
 	si.state = Follower
+}
+
+func (si *serverImpl) transitionToLeader() {
+
 }
 
 // LEADER
