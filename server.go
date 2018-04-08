@@ -1,5 +1,9 @@
 package raft
 
+import (
+	"time"
+)
+
 // AppendEntriesRequest contain the request payload for the AppendEntries RPC
 type AppendEntriesRequest struct {
 	leaderTerm   Term
@@ -45,30 +49,59 @@ type serverImpl struct {
 	commitIndex      LogIndex
 	lastAppliedIndex LogIndex
 	state            ServerState
+	nodeName         NodeName
 
 	// Volatile - leader
 	nextIndex  LogIndex
 	matchIndex LogIndex
 
 	storage Storage
+
+	mutex                      chan bool
+	leaderElectionTimeout      time.Duration
+	leaderElectionTimeoutTimer *time.Timer
 }
 
-func NewServer(storage Storage) Server {
+func NewServer(storage Storage, nodeName NodeName, leaderElectionTimeout time.Duration) Server {
+	mutex := make(chan bool, 1)
+	mutex <- true // add token
+
 	return &serverImpl{
+		nodeName:         nodeName,
 		commitIndex:      0,
 		lastAppliedIndex: 0,
 		state:            Follower,
 		nextIndex:        0,
 		matchIndex:       0,
 		storage:          storage,
+		mutex:            mutex,
+		leaderElectionTimeout:      leaderElectionTimeout,
+		leaderElectionTimeoutTimer: time.NewTimer(leaderElectionTimeout),
 	}
 }
 
-func (si *serverImpl) RequestVote(request RequestVoteRequest) RequestVoteResponse {
-	currentTerm := si.storage.CurrentTerm()
+func (si *serverImpl) Run() {
+	for {
+		select {
+		case <-si.leaderElectionTimeout.C:
+			si.handleLeaderElectionTimeout()
+		}
+	}
+}
 
-	// TODO if request.term > currentTerm -> transition to follower and update currentTerm
-	// TODO what to do about votedFor in this case? Should that be cleared?
+func (si *serverImpl) takeLock() {
+	<-si.mutex
+}
+
+func (si *serverImpl) releaseLock() {
+	si.mutex <- true
+}
+
+func (si *serverImpl) RequestVote(request RequestVoteRequest) RequestVoteResponse {
+	si.takeLock()
+	defer si.releaseLock()
+
+	currentTerm := si.storage.CurrentTerm()
 
 	if request.candidateTerm > currentTerm {
 		si.transitionToFollower(request.candidateTerm)
@@ -116,6 +149,9 @@ func (si *serverImpl) isCandidateLogUpToDate(request RequestVoteRequest) bool {
 }
 
 func (si *serverImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
+	si.takeLock()
+	defer si.releaseLock()
+
 	currentTerm := si.storage.CurrentTerm()
 
 	if request.leaderTerm > currentTerm {
@@ -124,9 +160,10 @@ func (si *serverImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesR
 
 	if si.state == Candidate {
 		si.transitionToFollower(request.leaderTerm)
+		// TODO remember to stop any in-flight votes etc
 	}
 
-	// TODO reset election timeout
+	si.leaderElectionTimeoutTimer.Reset(si.leaderElectionTimeout)
 
 	if request.leaderTerm < currentTerm {
 		// Leader is no longer the leader
@@ -177,22 +214,41 @@ func (si *serverImpl) isLogConsistent(request AppendEntriesRequest) bool {
 	return false
 }
 
-func (si *serverImpl) transitionToFollower(newTerm Term) {
+func (si *serverImpl) handleLeaderElectionTimeout() {
+	si.takeLock()
+	defer si.releaseLock()
+
+	newTerm := si.storage.CurrentTerm() + 1
 	si.storage.SetCurrentTerm(newTerm)
+
+	si.storage.SetVotedForIfUnset(si.nodeName)
+
+	// TODO we should also ensure the channel is cleared
+	si.leaderElectionTimeoutTimer.Reset(si.leaderElectionTimeout)
+
+	si.state = Candidate
+
+	// TODO send request vote RPCs to all other leaders
+	// If majority of hosts send votes then transition to leader
+
+	// TODO, remember, this may be triggered while already a candidate, should trigger new election
+}
+
+func (si *serverImpl) transitionToFollower(newTerm Term) {
+	oldTerm := si.storage.CurrentTerm()
+	si.storage.SetCurrentTerm(newTerm)
+
+	if oldTerm != newTerm {
+		// Don't clear vote if we are setting the same term multiple times, which might occur in certain edge cases
+		si.storage.ClearVotedFor()
+	}
+
 	si.state = Follower
 }
 
-func (l *lifecycle) run() {
-	stateMap := map[ServerState]lifecycle2.State{
-		Follower: lifecycle2.NewFollowerState(),
-	}
-
-	// TODO we could also have the function return a state, if we want to enforce the creation of new objects on each transition
-	currentState := stateMap[Follower]
-
-	for {
-		nextState := currentState.Enter()
-		currentState = stateMap[nextState]
-	}
-
-}
+// LEADER
+// TODO implement using advanced ticker?
+// - upon election, send initial heartbeat
+// - periodically send heartbeats
+// - send append entries RPCs if behind - backtrack on error
+// - update commit index (can be driven by append postprocess)

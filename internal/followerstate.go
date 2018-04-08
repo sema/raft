@@ -9,7 +9,7 @@ import (
 type followerState struct {
 }
 
-func newFollowerState() State {
+func NewFollowerState() StateImpl {
 	return &followerState{}
 }
 
