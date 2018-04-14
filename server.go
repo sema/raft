@@ -28,9 +28,10 @@ type serverImpl struct {
 	storage Storage
 	gateway ServerGateway
 
-	mutex                      chan bool
-	leaderElectionTimeout      time.Duration
-	leaderElectionTimeoutTimer *time.Timer
+	mutex                 chan bool
+	leaderElectionTimeout time.Duration
+
+	ticker *time.Timer
 }
 
 func NewServer(storage Storage, gateway ServerGateway, nodeName NodeName, leaderElectionTimeout time.Duration) Server {
@@ -47,15 +48,15 @@ func NewServer(storage Storage, gateway ServerGateway, nodeName NodeName, leader
 		storage:          storage,
 		gateway:          gateway,
 		mutex:            mutex,
-		leaderElectionTimeout:      leaderElectionTimeout,
-		leaderElectionTimeoutTimer: time.NewTimer(leaderElectionTimeout),
+		leaderElectionTimeout: leaderElectionTimeout,
+		ticker:                time.NewTimer(leaderElectionTimeout), // TODO decide on initial value
 	}
 }
 
 func (si *serverImpl) Run() {
 	for {
 		select {
-		case <-si.leaderElectionTimeoutTimer.C:
+		case <-si.ticker.C:
 			si.handleLeaderElectionTimeout()
 		}
 	}
