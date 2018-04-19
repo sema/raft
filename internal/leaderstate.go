@@ -5,7 +5,7 @@ import (
 )
 
 type leaderState struct {
-	storage go_raft.Storage
+	storage go_raft.PersistentStorage
 	volatileStorage VolatileStorage
 	gateway go_raft.ServerGateway
 }

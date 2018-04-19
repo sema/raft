@@ -5,7 +5,7 @@ import (
 )
 
 type candidateState struct {
-	storage go_raft.Storage
+	storage go_raft.PersistentStorage
 	volatileStorage VolatileStorage
 	gateway go_raft.ServerGateway
 }
@@ -36,10 +36,7 @@ func (f *candidateState) HandleRequestVote(request go_raft.RequestVoteRequest) (
 }
 
 func (f *candidateState) HandleAppendEntries(request go_raft.AppendEntriesRequest) (response go_raft.AppendEntriesResponse, nextState ServerState) {
-
-	// TODO determine response here? This indicates that a leader was elected in current term and we need to
-	// convert to follower
-
+	return go_raft.AppendEntriesResponse{}, NewFollowerState()
 }
 
 func (f *candidateState) HandleLeaderElectionTimeout() (newState ServerState) {

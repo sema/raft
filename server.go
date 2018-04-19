@@ -13,8 +13,10 @@ type Server interface {
 type serverImpl struct {
 	state internal.ServerState
 
-	storage Storage
-	gateway ServerGateway
+	persistentStorage PersistentStorage
+	volatileStorage internal.VolatileStorage
+
+	gateway           ServerGateway
 
 	mutex                 chan bool
 	leaderElectionTimeout time.Duration
@@ -22,15 +24,16 @@ type serverImpl struct {
 	ticker *time.Timer
 }
 
-func NewServer(storage Storage, gateway ServerGateway, nodeName NodeName, leaderElectionTimeout time.Duration) Server {
+func NewServer(serverID NodeName, persistentStorage PersistentStorage, gateway ServerGateway, leaderElectionTimeout time.Duration) Server {
 	mutex := make(chan bool, 1)
 	mutex <- true // add token
 
 	return &serverImpl{
-		state: internal.NewFollowerState(),
-		storage:          storage,
-		gateway:          gateway,
-		mutex:            mutex,
+		state:                 internal.NewFollowerState(),
+		persistentStorage:     persistentStorage,
+		volatileStorage: internal.VolatileStorage{},
+		gateway:               gateway,
+		mutex:                 mutex,
 		leaderElectionTimeout: leaderElectionTimeout,
 		ticker:                time.NewTimer(leaderElectionTimeout), // TODO decide on initial value
 	}
@@ -49,11 +52,11 @@ func (si *serverImpl) RequestVote(request RequestVoteRequest) RequestVoteRespons
 	si.takeLock()
 	defer si.releaseLock()
 
-	currentTerm := si.storage.CurrentTerm()
+	currentTerm := si.persistentStorage.CurrentTerm()
 
 	if request.CandidateTerm > currentTerm {
-		// New candidate is initiating a vote - convert to follower and participate
-		si.storage.SetCurrentTerm(request.CandidateTerm)
+		// New candidate is initiating a vote - convert to follower and participate (Dissertation 3.3)
+		si.persistentStorage.SetCurrentTerm(request.CandidateTerm)
 		currentTerm = request.CandidateTerm
 
 		si.transitionState(internal.NewFollowerState())
@@ -82,11 +85,11 @@ func (si *serverImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesR
 	si.takeLock()
 	defer si.releaseLock()
 
-	currentTerm := si.storage.CurrentTerm()
+	currentTerm := si.persistentStorage.CurrentTerm()
 
 	if request.LeaderTerm > currentTerm {
-		// New leader detected - follow it
-		si.storage.SetCurrentTerm(request.LeaderTerm)
+		// New leader detected - follow it (Dissertation 3.3)
+		si.persistentStorage.SetCurrentTerm(request.LeaderTerm)
 		currentTerm = request.LeaderTerm
 
 		si.transitionState(internal.NewFollowerState())

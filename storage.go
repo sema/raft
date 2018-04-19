@@ -1,7 +1,7 @@
 package go_raft
 
-// Storage defines the interface for any persistent storage required by the Raft protocol.
-type Storage interface {
+// PersistentStorage defines the interface for any persistent persistentStorage required by the Raft protocol.
+type PersistentStorage interface {
 	CurrentTerm() Term
 	SetCurrentTerm(newTerm Term)
 
@@ -17,14 +17,14 @@ type Storage interface {
 	MergeLogs(entries []LogEntry)
 }
 
-// memoryStorage implements the Storage interface using a memory back storage. Should only be used for testing!
+// memoryStorage implements the PersistentStorage interface using a memory back persistentStorage. Should only be used for testing!
 type memoryStorage struct {
 	currentTerm Term
 	votedFor    NodeName
 	logEntries  []LogEntry
 }
 
-func NewMemoryStorage() Storage {
+func NewMemoryStorage() PersistentStorage {
 	return &memoryStorage{}
 }
 
