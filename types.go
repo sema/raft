@@ -1,49 +1,49 @@
-package raft
+package go_raft
 
-type ServerState int
+//type ServerState int
 
-const (
+/*const (
 	Init      ServerState = iota
 	Leader    ServerState = iota
 	Candidate ServerState = iota
 	Follower  ServerState = iota
-)
+)*/
 
 type Term int
 type NodeName string
 type LogIndex int
 
 type LogEntry struct {
-	term  Term
-	index LogIndex
+	Term  Term
+	Index LogIndex
 }
 
 // AppendEntriesRequest contain the request payload for the AppendEntries RPC
 type AppendEntriesRequest struct {
-	leaderTerm   Term
-	leaderID     NodeName
-	leaderCommit LogIndex
-	prevLogIndex LogIndex
-	prevLogTerm  Term
-	entries      []LogEntry
+	LeaderTerm   Term
+	LeaderID     NodeName
+	LeaderCommit LogIndex
+	PrevLogIndex LogIndex
+	PrevLogTerm  Term
+	Entries      []LogEntry
 }
 
 // AppendEntriesResponse contain the response payload for the AppendEntries RPC
 type AppendEntriesResponse struct {
-	success bool
-	term    Term
+	Success bool
+	Term    Term
 }
 
 // RequestVoteRequest contain the request payload for the RequestVote RPC
 type RequestVoteRequest struct {
-	candidateTerm Term
-	candidateID   NodeName
-	lastLogIndex  LogIndex
-	lastLogTerm   Term
+	CandidateTerm Term
+	CandidateID   NodeName
+	LastLogIndex  LogIndex
+	LastLogTerm   Term
 }
 
 // RequestVoteResponse contain the response payload for the RequestVote RPC
 type RequestVoteResponse struct {
-	term        Term
-	voteGranted bool
+	Term        Term
+	VoteGranted bool
 }

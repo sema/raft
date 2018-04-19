@@ -1,4 +1,4 @@
-package raft
+package go_raft
 
 // Storage defines the interface for any persistent storage required by the Raft protocol.
 type Storage interface {
@@ -33,6 +33,10 @@ func (ms *memoryStorage) CurrentTerm() Term {
 }
 
 func (ms *memoryStorage) SetCurrentTerm(newTerm Term) {
+	if newTerm > ms.currentTerm {
+		// Don't clear vote if we are setting the same term multiple times, which might occur in certain edge cases
+		ms.votedFor = ""
+	}
 	ms.currentTerm = newTerm
 }
 

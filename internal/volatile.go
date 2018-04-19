@@ -1,15 +1,17 @@
 package internal
 
-import "github.com/sema/raft"
+import "github/sema/go-raft"
 
-type Volatile struct {
+// VolatileStorage contains in-memory state kept only during the
+// lifetime of the server. This state is reset every time the server is restarted.
+type VolatileStorage struct {
 	// Volatile
-	commitIndex      raft.LogIndex
-	lastAppliedIndex raft.LogIndex
-	state            raft.ServerState
-	nodeName         raft.NodeName
+	commitIndex      go_raft.LogIndex
+	lastAppliedIndex go_raft.LogIndex
+	state            go_raft.ServerState
+	nodeName         go_raft.NodeName
 
 	// Volatile - leader
-	nextIndex  raft.LogIndex
-	matchIndex raft.LogIndex
+	nextIndex  go_raft.LogIndex
+	matchIndex go_raft.LogIndex
 }

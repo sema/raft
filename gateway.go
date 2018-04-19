@@ -1,4 +1,4 @@
-package raft
+package go_raft
 
 type ServerGateway interface {
 	SendAppendEntriesRPC(name NodeName, request AppendEntriesRequest) AppendEntriesResponse

@@ -1,4 +1,4 @@
-package raft
+package go_raft
 
 import (
 	"testing"
