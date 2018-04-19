@@ -6,12 +6,11 @@ import "github/sema/go-raft"
 // lifetime of the server. This state is reset every time the server is restarted.
 type VolatileStorage struct {
 	// Volatile
-	commitIndex      go_raft.LogIndex
-	lastAppliedIndex go_raft.LogIndex
-	state            go_raft.ServerState
-	nodeName         go_raft.NodeName
+	CommitIndex      go_raft.LogIndex
+	LastAppliedIndex go_raft.LogIndex
+	ServerID go_raft.NodeName
 
 	// Volatile - leader
-	nextIndex  go_raft.LogIndex
-	matchIndex go_raft.LogIndex
+	NextIndex  go_raft.LogIndex
+	MatchIndex go_raft.LogIndex
 }

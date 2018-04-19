@@ -31,7 +31,11 @@ func NewServer(serverID NodeName, persistentStorage PersistentStorage, gateway S
 	return &serverImpl{
 		state:                 internal.NewFollowerState(),
 		persistentStorage:     persistentStorage,
-		volatileStorage: internal.VolatileStorage{},
+		volatileStorage: internal.VolatileStorage{
+			ServerID: serverID,
+			CommitIndex: LogIndex(0),
+			LastAppliedIndex: LogIndex(0),
+		},
 		gateway:               gateway,
 		mutex:                 mutex,
 		leaderElectionTimeout: leaderElectionTimeout,
@@ -124,7 +128,12 @@ func (si *serverImpl) TriggerLeaderElectionTimeout() {
 		newState := si.state.HandleLeaderElectionTimeout()
 
 		if newState != nil {
-			si.transitionState(newState)
+			newTerm := si.persistentStorage.CurrentTerm() + 1
+			si.persistentStorage.SetCurrentTerm(newTerm)
+
+			si.persistentStorage.SetVotedForIfUnset(si.volatileStorage.ServerID)
+
+			si.transitionState(internal.NewCandidateState())
 		} else {
 			return
 		}

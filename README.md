@@ -20,3 +20,9 @@ ServerState - Implements per-state logic for each event. Assumes (invariant) mat
 // - outgoing RPCs
 // - heartbeats
 // - timing adjustments / configuration
+
+
+- Everything in one pool, if-s to handle differences
+- Everything in different states, simple/generic server
+- Differences in states, more complex server with knowledge about states
+- Layered states, simple/generic server
