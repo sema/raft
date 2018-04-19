@@ -49,6 +49,24 @@ func (si *serverImpl) RequestVote(request RequestVoteRequest) RequestVoteRespons
 	si.takeLock()
 	defer si.releaseLock()
 
+	currentTerm := si.storage.CurrentTerm()
+
+	if request.CandidateTerm > currentTerm {
+		// New candidate is initiating a vote - convert to follower and participate
+		si.storage.SetCurrentTerm(request.CandidateTerm)
+		currentTerm = request.CandidateTerm
+
+		si.transitionState(internal.NewFollowerState())
+	}
+
+	if request.CandidateTerm < currentTerm {
+		// Candidate belongs to previous term - ignore
+		return RequestVoteResponse{
+			Term:        currentTerm,
+			VoteGranted: false,
+		}
+	}
+
 	for {
 		response, newState := si.state.HandleRequestVote(request)
 
@@ -63,6 +81,24 @@ func (si *serverImpl) RequestVote(request RequestVoteRequest) RequestVoteRespons
 func (si *serverImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
 	si.takeLock()
 	defer si.releaseLock()
+
+	currentTerm := si.storage.CurrentTerm()
+
+	if request.LeaderTerm > currentTerm {
+		// New leader detected - follow it
+		si.storage.SetCurrentTerm(request.LeaderTerm)
+		currentTerm = request.LeaderTerm
+
+		si.transitionState(internal.NewFollowerState())
+	}
+
+	if request.LeaderTerm < currentTerm {
+		// Request from old leader - ignore request
+		return AppendEntriesResponse{
+			Term:    currentTerm,
+			Success: false,
+		}
+	}
 
 	si.leaderElectionTimeoutTimer.Reset(si.leaderElectionTimeout)
 

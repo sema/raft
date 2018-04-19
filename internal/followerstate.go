@@ -32,18 +32,6 @@ func (f *followerState) Enter() () {
 func (f *followerState) HandleRequestVote(request go_raft.RequestVoteRequest) (response go_raft.RequestVoteResponse, newState ServerState) {
 	currentTerm := f.storage.CurrentTerm()
 
-	if request.CandidateTerm > currentTerm {
-		f.storage.SetCurrentTerm(request.CandidateTerm)
-		return go_raft.RequestVoteResponse{}, NewFollowerState()
-	}
-
-	if request.CandidateTerm < currentTerm {
-		return go_raft.RequestVoteResponse{
-			Term:        currentTerm,
-			VoteGranted: false,
-		}, nil
-	}
-
 	f.tryVoteForCandidate(request)
 
 	return go_raft.RequestVoteResponse{
@@ -79,24 +67,9 @@ func (f *followerState) isCandidateLogReplicationUpToDate(request go_raft.Reques
 }
 
 func (f *followerState) HandleAppendEntries(request go_raft.AppendEntriesRequest) (response go_raft.AppendEntriesResponse, nextState ServerState) {
-	currentTerm := f.storage.CurrentTerm()
-
-	if request.LeaderTerm > currentTerm {
-		f.storage.SetCurrentTerm(request.LeaderTerm)
-		return go_raft.AppendEntriesResponse{}, NewFollowerState()
-	}
-
-	if request.LeaderTerm < currentTerm {
-		// Leader is no longer the leader
-		return go_raft.AppendEntriesResponse{
-			Term:    currentTerm,
-			Success: false,
-		}, nil
-	}
-
 	if !f.isLogConsistent(request) {
 		return go_raft.AppendEntriesResponse{
-			Term:    currentTerm,
+			Term:    f.storage.CurrentTerm(),
 			Success: false,
 		}, nil
 	}
@@ -114,7 +87,7 @@ func (f *followerState) HandleAppendEntries(request go_raft.AppendEntriesRequest
 	}
 
 	return go_raft.AppendEntriesResponse{
-		Term:    currentTerm,
+		Term:    f.storage.CurrentTerm(),
 		Success: true,
 	}, nil
 }
