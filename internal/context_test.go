@@ -1,4 +1,4 @@
-package go_raft
+package internal
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
 	candidateID := NodeName("candidate1.candidates.local")
 
 	storage := NewMemoryStorage()
-	server := NewServer(storage)
+	server := NewContext(storage)
 
 	response := server.RequestVote(RequestVoteRequest{
 		candidateTerm: 0,
@@ -43,7 +43,7 @@ func TestRequestVoteIsAbleToGetVoteForNonInitialTerm(t *testing.T) {
 		index: 3,
 	})
 
-	server := NewServer(storage)
+	server := NewContext(storage)
 
 	response := server.RequestVote(RequestVoteRequest{
 		candidateTerm: 2,
@@ -67,7 +67,7 @@ func TestRequestVoteOnlyOneCandidateCanGetAVoteWithinATerm(t *testing.T) {
 
 	storage := NewMemoryStorage()
 	storage.SetVotedForIfUnset(candidate1ID)
-	server := NewServer(storage)
+	server := NewContext(storage)
 
 	response := server.RequestVote(RequestVoteRequest{
 		candidateTerm: 0,

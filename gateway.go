@@ -1,8 +1,8 @@
 package go_raft
 
 type ServerGateway interface {
-	SendAppendEntriesRPC(name NodeName, request AppendEntriesRequest) AppendEntriesResponse
-	SendRequestVoteRPC(name NodeName, request RequestVoteRequest) RequestVoteResponse
+	SendAppendEntriesRPC(name ServerID, request AppendEntriesRequest) AppendEntriesResponse
+	SendRequestVoteRPC(name ServerID, request RequestVoteRequest) RequestVoteResponse
 }
 
 func SendAppendEntriesRPC() {

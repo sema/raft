@@ -1,16 +1,7 @@
 package go_raft
 
-//type ServerState int
-
-/*const (
-	Init      ServerState = iota
-	Leader    ServerState = iota
-	Candidate ServerState = iota
-	Follower  ServerState = iota
-)*/
-
 type Term int
-type NodeName string
+type ServerID string
 type LogIndex int
 
 type LogEntry struct {
@@ -21,7 +12,7 @@ type LogEntry struct {
 // AppendEntriesRequest contain the request payload for the AppendEntries RPC
 type AppendEntriesRequest struct {
 	LeaderTerm   Term
-	LeaderID     NodeName
+	LeaderID     ServerID
 	LeaderCommit LogIndex
 	PrevLogIndex LogIndex
 	PrevLogTerm  Term
@@ -37,7 +28,7 @@ type AppendEntriesResponse struct {
 // RequestVoteRequest contain the request payload for the RequestVote RPC
 type RequestVoteRequest struct {
 	CandidateTerm Term
-	CandidateID   NodeName
+	CandidateID   ServerID
 	LastLogIndex  LogIndex
 	LastLogTerm   Term
 }
@@ -46,4 +37,21 @@ type RequestVoteRequest struct {
 type RequestVoteResponse struct {
 	Term        Term
 	VoteGranted bool
+}
+
+// PersistentStorage defines the interface for any persistent persistentStorage required by the Raft protocol.
+type PersistentStorage interface {
+	CurrentTerm() Term
+	SetCurrentTerm(newTerm Term)
+
+	VotedFor() ServerID
+	ClearVotedFor()
+	SetVotedForIfUnset(votedFor ServerID)
+
+	Log(index LogIndex) (logEntry LogEntry, ok bool)
+	LatestLogEntry() (logEntry LogEntry, ok bool)
+	AppendLog(entry LogEntry)
+
+	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms
+	MergeLogs(entries []LogEntry)
 }

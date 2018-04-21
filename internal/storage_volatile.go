@@ -8,7 +8,7 @@ type VolatileStorage struct {
 	// Volatile
 	CommitIndex      go_raft.LogIndex
 	LastAppliedIndex go_raft.LogIndex
-	ServerID go_raft.NodeName
+	ServerID         go_raft.ServerID
 
 	// Volatile - leader
 	NextIndex  go_raft.LogIndex
