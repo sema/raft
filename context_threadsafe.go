@@ -1,30 +1,26 @@
-package internal
-
-import (
-	"github/sema/go-raft"
-)
+package go_raft
 
 // TODO determine if we need to do locking at this level, or if we can push it down
 type threadsafeStateContext struct {
-	wrapped StateContext
+	wrapped stateContext
 	mutex   chan bool
 }
 
-func NewThreadsafeStateContext(context StateContext) StateContext {
+func NewThreadsafeStateContext(context stateContext) stateContext {
 	return &threadsafeStateContext{
 		wrapped: context,
 		mutex:   make(chan bool, 1),
 	}
 }
 
-func (c *threadsafeStateContext) RequestVote(request go_raft.RequestVoteRequest) go_raft.RequestVoteResponse {
+func (c *threadsafeStateContext) RequestVote(request RequestVoteRequest) RequestVoteResponse {
 	c.takeLock()
 	defer c.releaseLock()
 
 	return c.wrapped.RequestVote(request)
 }
 
-func (c *threadsafeStateContext) AppendEntries(request go_raft.AppendEntriesRequest) go_raft.AppendEntriesResponse {
+func (c *threadsafeStateContext) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
 	c.takeLock()
 	defer c.releaseLock()
 

@@ -5,10 +5,9 @@ type Discovery interface {
 }
 
 type discovery struct {
-
 }
 
-func (d* discovery) Servers() []ServerID {
+func (d *discovery) Servers() []ServerID {
 	// TODO implement
 	return nil
 }

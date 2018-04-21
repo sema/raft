@@ -1,14 +1,12 @@
-package internal
-
-import "github/sema/go-raft"
+package go_raft
 
 type commonState struct {
-	wrapped ServerState
+	wrapped serverState
 
-	persistentStorage go_raft.PersistentStorage
+	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
-	gateway           go_raft.ServerGateway
-	discovery         go_raft.Discovery
+	gateway           ServerGateway
+	discovery         Discovery
 }
 
 func (s *commonState) Name() string {
@@ -19,18 +17,18 @@ func (*commonState) Enter() {
 	panic("implement me")
 }
 
-func (s *commonState) HandleRequestVote(request go_raft.RequestVoteRequest) (response go_raft.RequestVoteResponse, newState ServerState) {
+func (s *commonState) HandleRequestVote(request RequestVoteRequest) (response RequestVoteResponse, newState serverState) {
 	currentTerm := s.persistentStorage.CurrentTerm()
 
 	if request.CandidateTerm > currentTerm {
 		// New candidate is initiating a vote - convert to follower and participate (Dissertation 3.3)
 		s.persistentStorage.SetCurrentTerm(request.CandidateTerm)
-		return go_raft.RequestVoteResponse{}, NewFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
+		return RequestVoteResponse{}, newFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
 	}
 
 	if request.CandidateTerm < currentTerm {
 		// Candidate belongs to previous term - ignore
-		return go_raft.RequestVoteResponse{
+		return RequestVoteResponse{
 			Term:        currentTerm,
 			VoteGranted: false,
 		}, nil
@@ -39,18 +37,18 @@ func (s *commonState) HandleRequestVote(request go_raft.RequestVoteRequest) (res
 	return s.wrapped.HandleRequestVote(request)
 }
 
-func (s *commonState) HandleAppendEntries(request go_raft.AppendEntriesRequest) (response go_raft.AppendEntriesResponse, newState ServerState) {
+func (s *commonState) HandleAppendEntries(request AppendEntriesRequest) (response AppendEntriesResponse, newState serverState) {
 	currentTerm := s.persistentStorage.CurrentTerm()
 
 	if request.LeaderTerm > currentTerm {
 		// New leader detected - follow it (Dissertation 3.3)
 		s.persistentStorage.SetCurrentTerm(request.LeaderTerm)
-		return go_raft.AppendEntriesResponse{}, NewFollowerState()
+		return AppendEntriesResponse{}, newFollowerState()
 	}
 
 	if request.LeaderTerm < currentTerm {
 		// Request from old leader - ignore request
-		return go_raft.AppendEntriesResponse{
+		return AppendEntriesResponse{
 			Term:    currentTerm,
 			Success: false,
 		}, nil
@@ -59,12 +57,12 @@ func (s *commonState) HandleAppendEntries(request go_raft.AppendEntriesRequest) 
 	return s.wrapped.HandleAppendEntries(request)
 }
 
-func (s *commonState) TriggerLeaderElection() ServerState {
+func (s *commonState) TriggerLeaderElection() serverState {
 	newTerm := s.persistentStorage.CurrentTerm() + 1
 	s.persistentStorage.SetCurrentTerm(newTerm)
 	s.persistentStorage.SetVotedForIfUnset(s.volatileStorage.ServerID)
 
-	return NewCandidateState(s.persistentStorage, s.volatileStorage, s.gateway)
+	return NewCandidateState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
 }
 
 func (*commonState) Exit() {

@@ -1,17 +1,13 @@
-package internal
-
-import (
-	"github/sema/go-raft"
-)
+package go_raft
 
 type followerState struct {
-	persistentStorage go_raft.PersistentStorage
+	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
-	gateway           go_raft.ServerGateway
-	discovery         go_raft.Discovery
+	gateway           ServerGateway
+	discovery         Discovery
 }
 
-func NewFollowerState(persistentStorage go_raft.PersistentStorage, volatileStorage *VolatileStorage, gateway go_raft.ServerGateway, discovery go_raft.Discovery) ServerState {
+func newFollowerState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery) serverState {
 	return &commonState{
 		wrapped: &followerState{
 			persistentStorage: persistentStorage,
@@ -34,18 +30,18 @@ func (s *followerState) Enter() {
 
 }
 
-func (s *followerState) HandleRequestVote(request go_raft.RequestVoteRequest) (response go_raft.RequestVoteResponse, newState ServerState) {
+func (s *followerState) HandleRequestVote(request RequestVoteRequest) (response RequestVoteResponse, newState serverState) {
 	currentTerm := s.persistentStorage.CurrentTerm()
 
 	s.tryVoteForCandidate(request)
 
-	return go_raft.RequestVoteResponse{
+	return RequestVoteResponse{
 		Term:        currentTerm,
 		VoteGranted: s.persistentStorage.VotedFor() == request.CandidateID,
 	}, nil
 }
 
-func (s *followerState) tryVoteForCandidate(request go_raft.RequestVoteRequest) {
+func (s *followerState) tryVoteForCandidate(request RequestVoteRequest) {
 	if !s.isCandidateLogReplicationUpToDate(request) {
 		return
 	}
@@ -53,7 +49,7 @@ func (s *followerState) tryVoteForCandidate(request go_raft.RequestVoteRequest) 
 	s.persistentStorage.SetVotedForIfUnset(request.CandidateID)
 }
 
-func (s *followerState) isCandidateLogReplicationUpToDate(request go_raft.RequestVoteRequest) bool {
+func (s *followerState) isCandidateLogReplicationUpToDate(request RequestVoteRequest) bool {
 	logEntry, ok := s.persistentStorage.LatestLogEntry()
 
 	if !ok {
@@ -71,9 +67,9 @@ func (s *followerState) isCandidateLogReplicationUpToDate(request go_raft.Reques
 	return false // candidate is at older term or has fewer entries
 }
 
-func (s *followerState) HandleAppendEntries(request go_raft.AppendEntriesRequest) (response go_raft.AppendEntriesResponse, nextState ServerState) {
+func (s *followerState) HandleAppendEntries(request AppendEntriesRequest) (response AppendEntriesResponse, nextState serverState) {
 	if !s.isLogConsistent(request) {
-		return go_raft.AppendEntriesResponse{
+		return AppendEntriesResponse{
 			Term:    s.persistentStorage.CurrentTerm(),
 			Success: false,
 		}, nil
@@ -81,23 +77,23 @@ func (s *followerState) HandleAppendEntries(request go_raft.AppendEntriesRequest
 
 	s.persistentStorage.MergeLogs(request.Entries)
 
-	if request.LeaderCommit > s.volatileStorage.commitIndex {
+	if request.LeaderCommit > s.volatileStorage.CommitIndex {
 		// It is possible that a newly elected leader has a lower commit index
 		// than the previously elected leader. The commit index will eventually
 		// reach the old point.
 		//
 		// In this implementation, we ensure the commit index never decreases
 		// locally.
-		s.volatileStorage.commitIndex = request.LeaderCommit
+		s.volatileStorage.CommitIndex = request.LeaderCommit
 	}
 
-	return go_raft.AppendEntriesResponse{
+	return AppendEntriesResponse{
 		Term:    s.persistentStorage.CurrentTerm(),
 		Success: true,
 	}, nil
 }
 
-func (s *followerState) isLogConsistent(request go_raft.AppendEntriesRequest) bool {
+func (s *followerState) isLogConsistent(request AppendEntriesRequest) bool {
 	if request.PrevLogIndex == 0 && request.PrevLogTerm == 0 {
 		// Base case - no previous log entries in log
 		return true
@@ -113,7 +109,7 @@ func (s *followerState) isLogConsistent(request go_raft.AppendEntriesRequest) bo
 	return false
 }
 
-func (s *followerState) TriggerLeaderElection() (newState ServerState) {
+func (s *followerState) TriggerLeaderElection() (newState serverState) {
 	// Implemented in common context
 	panic("implement me")
 }

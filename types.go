@@ -55,3 +55,11 @@ type PersistentStorage interface {
 	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms
 	MergeLogs(entries []LogEntry)
 }
+
+type serverState interface {
+	Name() string
+
+	HandleRequestVote(RequestVoteRequest) (response RequestVoteResponse, newState serverState)
+	HandleAppendEntries(AppendEntriesRequest) (response AppendEntriesResponse, newState serverState)
+	TriggerLeaderElection() (newState serverState)
+}

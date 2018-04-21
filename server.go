@@ -1,7 +1,5 @@
 package go_raft
 
-import "github/sema/go-raft/internal"
-
 type Server interface {
 	Run()
 	RequestVote(RequestVoteRequest) RequestVoteResponse
@@ -9,15 +7,15 @@ type Server interface {
 }
 
 type server struct {
-	stateContext     internal.StateContext
-	heartbeatMonitor internal.HeartbeatMonitor
+	stateContext     stateContext
+	heartbeatMonitor HeartbeatMonitor
 }
 
 func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery Discovery) Server {
-	context := internal.NewStateContext(serverID, storage, gateway, discovery)
-	context = internal.NewThreadsafeStateContext(context)
+	context := newStateContext(serverID, storage, gateway, discovery)
+	context = NewThreadsafeStateContext(context)
 
-	heartbeatMonitor := internal.NewHeartbeatMonitor()
+	heartbeatMonitor := NewHeartbeatMonitor()
 
 	// TODO send reset signal to monitor on AppendEntries calls
 	// c.leaderElectionTimeoutTimer.Reset(c.leaderElectionTimeout)

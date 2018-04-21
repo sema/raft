@@ -1,29 +1,25 @@
-package internal
-
-import (
-	"github/sema/go-raft"
-)
+package go_raft
 
 type stateContext struct {
-	state ServerState
+	state serverState
 
-	persistentStorage go_raft.PersistentStorage
+	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 
-	gateway   go_raft.ServerGateway
-	discovery go_raft.Discovery
+	gateway   ServerGateway
+	discovery Discovery
 }
 
-func NewStateContext(serverID go_raft.ServerID, persistentStorage go_raft.PersistentStorage, gateway go_raft.ServerGateway, discovery go_raft.Discovery) StateContext {
+func newStateContext(serverID ServerID, persistentStorage PersistentStorage, gateway ServerGateway, discovery Discovery) *stateContext {
 	volatileStorage := &VolatileStorage{
 		ServerID:         serverID,
-		CommitIndex:      go_raft.LogIndex(0),
-		LastAppliedIndex: go_raft.LogIndex(0),
+		CommitIndex:      LogIndex(0),
+		LastAppliedIndex: LogIndex(0),
 	}
 
 	return &stateContext{
 		// TODO reuse the same state objects to reduce GC churn
-		state:             NewFollowerState(persistentStorage, volatileStorage, gateway),
+		state:             newFollowerState(persistentStorage, volatileStorage, gateway, discovery),
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
@@ -31,7 +27,7 @@ func NewStateContext(serverID go_raft.ServerID, persistentStorage go_raft.Persis
 	}
 }
 
-func (c *stateContext) RequestVote(request go_raft.RequestVoteRequest) go_raft.RequestVoteResponse {
+func (c *stateContext) RequestVote(request RequestVoteRequest) RequestVoteResponse {
 	for {
 		response, newState := c.state.HandleRequestVote(request)
 
@@ -43,7 +39,7 @@ func (c *stateContext) RequestVote(request go_raft.RequestVoteRequest) go_raft.R
 	}
 }
 
-func (c *stateContext) AppendEntries(request go_raft.AppendEntriesRequest) go_raft.AppendEntriesResponse {
+func (c *stateContext) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
 	for {
 		response, newState := c.state.HandleAppendEntries(request)
 
@@ -67,6 +63,6 @@ func (c *stateContext) TriggerLeaderElection() {
 	// twist in the logic in the TriggerLeaderElection method
 }
 
-func (c *stateContext) transitionState(newState ServerState) {
+func (c *stateContext) transitionState(newState serverState) {
 	c.state = newState
 }
