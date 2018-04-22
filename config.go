@@ -3,6 +3,6 @@ package go_raft
 import "time"
 
 type Config struct {
-	leaderElectionTimeout      time.Duration
-	leaderElectionTimeoutSplay time.Duration
+	LeaderElectionTimeout      time.Duration
+	LeaderElectionTimeoutSplay time.Duration
 }

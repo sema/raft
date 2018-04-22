@@ -7,14 +7,15 @@ type commonState struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         Discovery
+	context stateContext
 }
 
 func (s *commonState) Name() string {
 	return s.wrapped.Name()
 }
 
-func (*commonState) Enter() {
-	panic("implement me")
+func (s *commonState) Enter() {
+	s.wrapped.Enter()
 }
 
 func (s *commonState) HandleRequestVote(request RequestVoteRequest) (response RequestVoteResponse, newState serverState) {
@@ -23,7 +24,7 @@ func (s *commonState) HandleRequestVote(request RequestVoteRequest) (response Re
 	if request.CandidateTerm > currentTerm {
 		// New candidate is initiating a vote - convert to follower and participate (Dissertation 3.3)
 		s.persistentStorage.SetCurrentTerm(request.CandidateTerm)
-		return RequestVoteResponse{}, newFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
+		return RequestVoteResponse{}, newFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery, s.context)
 	}
 
 	if request.CandidateTerm < currentTerm {
@@ -43,7 +44,7 @@ func (s *commonState) HandleAppendEntries(request AppendEntriesRequest) (respons
 	if request.LeaderTerm > currentTerm {
 		// New leader detected - follow it (Dissertation 3.3)
 		s.persistentStorage.SetCurrentTerm(request.LeaderTerm)
-		return AppendEntriesResponse{}, newFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
+		return AppendEntriesResponse{}, newFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery, s.context)
 	}
 
 	if request.LeaderTerm < currentTerm {
@@ -62,9 +63,9 @@ func (s *commonState) TriggerLeaderElection() serverState {
 	s.persistentStorage.SetCurrentTerm(newTerm)
 	s.persistentStorage.SetVotedForIfUnset(s.volatileStorage.ServerID)
 
-	return NewCandidateState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
+	return newCandidateState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery, s.context)
 }
 
-func (*commonState) Exit() {
-	panic("implement me")
+func (s *commonState) Exit() {
+	s.wrapped.Exit()
 }

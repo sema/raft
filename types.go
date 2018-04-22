@@ -49,7 +49,7 @@ type PersistentStorage interface {
 	SetVotedForIfUnset(votedFor ServerID)
 
 	Log(index LogIndex) (logEntry LogEntry, ok bool)
-	LatestLogEntry() (logEntry LogEntry, ok bool)
+	LatestLogEntry() (logEntry LogEntry)
 	AppendLog(entry LogEntry)
 
 	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms
@@ -62,4 +62,7 @@ type serverState interface {
 	HandleRequestVote(RequestVoteRequest) (response RequestVoteResponse, newState serverState)
 	HandleAppendEntries(AppendEntriesRequest) (response AppendEntriesResponse, newState serverState)
 	TriggerLeaderElection() (newState serverState)
+
+	Enter()
+	Exit()
 }

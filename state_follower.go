@@ -5,21 +5,24 @@ type followerState struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         Discovery
+	context stateContext
 }
 
 // TODO reuse the same state objects to reduce GC churn
-func newFollowerState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery) serverState {
+func newFollowerState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery, context stateContext) serverState {
 	return &commonState{
 		wrapped: &followerState{
 			persistentStorage: persistentStorage,
 			volatileStorage:   volatileStorage,
 			gateway:           gateway,
 			discovery:         discovery,
+			context: context,
 		},
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
 		discovery:         discovery,
+		context: context,
 	}
 }
 
@@ -51,21 +54,21 @@ func (s *followerState) tryVoteForCandidate(request RequestVoteRequest) {
 }
 
 func (s *followerState) isCandidateLogReplicationUpToDate(request RequestVoteRequest) bool {
-	logEntry, ok := s.persistentStorage.LatestLogEntry()
-
-	if !ok {
-		return true // we have no logs locally, thus candidate can't be behind
-	}
+	logEntry := s.persistentStorage.LatestLogEntry()
 
 	if logEntry.Term < request.LastLogTerm {
-		return true // candidate is at a newer term
+		// Candidate is at a newer term
+		return true
 	}
 
 	if logEntry.Term == request.LastLogTerm && logEntry.Index <= request.LastLogIndex {
-		return true // candidate has the same or more log entries for the current term
+		// Candidate has the same or more log entries for the current term.
+		// Note: logEntry's term and index are 0 if we do not have any logs locally yet
+		return true
 	}
 
-	return false // candidate is at older term or has fewer entries
+	// Candidate is at older term or has fewer entries
+	return false
 }
 
 func (s *followerState) HandleAppendEntries(request AppendEntriesRequest) (response AppendEntriesResponse, nextState serverState) {

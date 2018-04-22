@@ -1,9 +1,15 @@
 package go_raft
 
+import "log"
+
 type stateContext interface {
 	RequestVote(request RequestVoteRequest) RequestVoteResponse
 	AppendEntries(request AppendEntriesRequest) AppendEntriesResponse
 	TriggerLeaderElection()
+
+	TransitionStateIf(newState serverState, term Term)
+
+	CurrentStateName() string
 }
 
 type stateContextImpl struct {
@@ -23,13 +29,16 @@ func newStateContext(serverID ServerID, persistentStorage PersistentStorage, gat
 		LastAppliedIndex: LogIndex(0),
 	}
 
-	return &stateContextImpl{
-		state:             newFollowerState(persistentStorage, volatileStorage, gateway, discovery),
+	context := &stateContextImpl{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
 		discovery:         discovery,
 	}
+
+	context.state = newFollowerState(persistentStorage, volatileStorage, gateway, discovery, context)
+
+	return context
 }
 
 func (c *stateContextImpl) RequestVote(request RequestVoteRequest) RequestVoteResponse {
@@ -68,6 +77,20 @@ func (c *stateContextImpl) TriggerLeaderElection() {
 	// twist in the logic in the TriggerLeaderElection method
 }
 
+func (c *stateContextImpl) TransitionStateIf(newState serverState, term Term) {
+	// TODO cleanup this mess
+	if c.persistentStorage.CurrentTerm() == term {
+		c.transitionState(newState)
+	}
+}
+
+func (c *stateContextImpl) CurrentStateName() string {
+	return c.state.Name()
+}
+
 func (c *stateContextImpl) transitionState(newState serverState) {
+	log.Printf("Changing state %s -> %s", c.state.Name(), newState.Name())
+	c.state.Exit()
 	c.state = newState
+	c.state.Enter()
 }

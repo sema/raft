@@ -5,19 +5,23 @@ type ServerGateway interface {
 	SendRequestVoteRPC(name ServerID, request RequestVoteRequest) RequestVoteResponse
 }
 
-type gatewayImpl struct {
+type localGateway struct {
+	servers map[ServerID]Server
 }
 
-func NewServerGateway() ServerGateway {
-	return &gatewayImpl{}
+func NewLocalServerGateway(servers map[ServerID]Server) ServerGateway {
+	return &localGateway{
+		servers: servers,
+	}
 }
 
-func (*gatewayImpl) SendAppendEntriesRPC(name ServerID, request AppendEntriesRequest) AppendEntriesResponse {
+func (g *localGateway) SendAppendEntriesRPC(name ServerID, request AppendEntriesRequest) AppendEntriesResponse {
 	// TODO actually check for this
 	// assert request.prevLogIndex + len(request.entries) >= request.leaderCommit
 	panic("implement me")
 }
 
-func (*gatewayImpl) SendRequestVoteRPC(name ServerID, request RequestVoteRequest) RequestVoteResponse {
-	panic("implement me")
+func (g *localGateway) SendRequestVoteRPC(name ServerID, request RequestVoteRequest) RequestVoteResponse {
+	server := g.servers[name]
+	return server.RequestVote(request)
 }

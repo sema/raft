@@ -12,20 +12,23 @@ type leaderState struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         Discovery
+	context stateContext
 }
 
-func NewLeaderState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery) serverState {
+func NewLeaderState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery, context stateContext) serverState {
 	return &commonState{
 		wrapped: &leaderState{
 			persistentStorage: persistentStorage,
 			volatileStorage:   volatileStorage,
 			gateway:           gateway,
 			discovery:         discovery,
+			context: context,
 		},
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
 		discovery:         discovery,
+		context: context,
 	}
 }
 

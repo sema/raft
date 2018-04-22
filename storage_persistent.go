@@ -62,10 +62,13 @@ func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
 	panic("implement me")
 }
 
-func (ms *memoryStorage) LatestLogEntry() (logEntry LogEntry, ok bool) {
+func (ms *memoryStorage) LatestLogEntry() (logEntry LogEntry) {
 	if len(ms.logEntries) == 0 {
-		return LogEntry{}, false
+		return LogEntry{
+			Term:  0,
+			Index: 0,
+		}
 	}
 
-	return ms.logEntries[len(ms.logEntries)-1], true
+	return ms.logEntries[len(ms.logEntries)-1]
 }
