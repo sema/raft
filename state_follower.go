@@ -7,6 +7,7 @@ type followerState struct {
 	discovery         Discovery
 }
 
+// TODO reuse the same state objects to reduce GC churn
 func newFollowerState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery) serverState {
 	return &commonState{
 		wrapped: &followerState{

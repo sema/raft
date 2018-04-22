@@ -71,7 +71,7 @@ func (s *leaderState) Exit() {
 }
 
 func (s *leaderState) heartbeat() {
-	for serverID := range s.discovery.Servers() {
+	for _, serverID := range s.discovery.Servers() {
 		go s.sendSingleHeartbeat(serverID)
 	}
 

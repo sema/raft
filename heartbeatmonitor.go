@@ -15,7 +15,7 @@ type HeartbeatMonitor interface {
 
 type heartbeatMonitor struct {
 	timer  *time.Timer
-	signal <-chan time.Time
+	signal chan time.Time
 
 	timeout time.Duration
 	splay   time.Duration

@@ -11,11 +11,11 @@ type server struct {
 	heartbeatMonitor HeartbeatMonitor
 }
 
-func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery Discovery) Server {
+func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery Discovery, config Config) Server {
 	context := newStateContext(serverID, storage, gateway, discovery)
 	context = NewThreadsafeStateContext(context)
 
-	heartbeatMonitor := NewHeartbeatMonitor()
+	heartbeatMonitor := NewHeartbeatMonitor(config.leaderElectionTimeout, config.leaderElectionTimeoutSplay)
 
 	// TODO send reset signal to monitor on AppendEntries calls
 	// c.leaderElectionTimeoutTimer.Reset(c.leaderElectionTimeout)

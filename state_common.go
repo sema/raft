@@ -43,7 +43,7 @@ func (s *commonState) HandleAppendEntries(request AppendEntriesRequest) (respons
 	if request.LeaderTerm > currentTerm {
 		// New leader detected - follow it (Dissertation 3.3)
 		s.persistentStorage.SetCurrentTerm(request.LeaderTerm)
-		return AppendEntriesResponse{}, newFollowerState()
+		return AppendEntriesResponse{}, newFollowerState(s.persistentStorage, s.volatileStorage, s.gateway, s.discovery)
 	}
 
 	if request.LeaderTerm < currentTerm {

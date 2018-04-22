@@ -4,10 +4,16 @@ type Discovery interface {
 	Servers() []ServerID
 }
 
-type discovery struct {
+type staticDiscovery struct {
+	servers []ServerID
 }
 
-func (d *discovery) Servers() []ServerID {
-	// TODO implement
-	return nil
+func NewStaticDiscovery(servers []ServerID) Discovery {
+	return &staticDiscovery{
+		servers: servers,
+	}
+}
+
+func (d *staticDiscovery) Servers() []ServerID {
+	return d.servers
 }

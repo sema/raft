@@ -1,6 +1,12 @@
 package go_raft
 
-type stateContext struct {
+type stateContext interface {
+	RequestVote(request RequestVoteRequest) RequestVoteResponse
+	AppendEntries(request AppendEntriesRequest) AppendEntriesResponse
+	TriggerLeaderElection()
+}
+
+type stateContextImpl struct {
 	state serverState
 
 	persistentStorage PersistentStorage
@@ -10,15 +16,14 @@ type stateContext struct {
 	discovery Discovery
 }
 
-func newStateContext(serverID ServerID, persistentStorage PersistentStorage, gateway ServerGateway, discovery Discovery) *stateContext {
+func newStateContext(serverID ServerID, persistentStorage PersistentStorage, gateway ServerGateway, discovery Discovery) stateContext {
 	volatileStorage := &VolatileStorage{
 		ServerID:         serverID,
 		CommitIndex:      LogIndex(0),
 		LastAppliedIndex: LogIndex(0),
 	}
 
-	return &stateContext{
-		// TODO reuse the same state objects to reduce GC churn
+	return &stateContextImpl{
 		state:             newFollowerState(persistentStorage, volatileStorage, gateway, discovery),
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
@@ -27,7 +32,7 @@ func newStateContext(serverID ServerID, persistentStorage PersistentStorage, gat
 	}
 }
 
-func (c *stateContext) RequestVote(request RequestVoteRequest) RequestVoteResponse {
+func (c *stateContextImpl) RequestVote(request RequestVoteRequest) RequestVoteResponse {
 	for {
 		response, newState := c.state.HandleRequestVote(request)
 
@@ -39,7 +44,7 @@ func (c *stateContext) RequestVote(request RequestVoteRequest) RequestVoteRespon
 	}
 }
 
-func (c *stateContext) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
+func (c *stateContextImpl) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
 	for {
 		response, newState := c.state.HandleAppendEntries(request)
 
@@ -51,7 +56,7 @@ func (c *stateContext) AppendEntries(request AppendEntriesRequest) AppendEntries
 	}
 }
 
-func (c *stateContext) TriggerLeaderElection() {
+func (c *stateContextImpl) TriggerLeaderElection() {
 	// Don't repeat request in this case
 	newState := c.state.TriggerLeaderElection()
 
@@ -63,6 +68,6 @@ func (c *stateContext) TriggerLeaderElection() {
 	// twist in the logic in the TriggerLeaderElection method
 }
 
-func (c *stateContext) transitionState(newState serverState) {
+func (c *stateContextImpl) transitionState(newState serverState) {
 	c.state = newState
 }
