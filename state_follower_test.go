@@ -2,42 +2,38 @@ package go_raft
 
 import "testing"
 
-func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
-	candidateID := ServerID("candidate1.candidates.local")
+const candidate1ID = ServerID("candidate1.candidates.local")
+const candidate2ID = ServerID("candidate2.candidates.local")
 
+
+func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
 	persistentStorage := NewMemoryStorage()
+	persistentStorage.SetCurrentTerm(0)
+
 	volatileStorage := &VolatileStorage{}
-	discovery := NewStaticDiscovery([]ServerID{candidateID})
+	discovery := NewStaticDiscovery([]ServerID{candidate1ID, candidate2ID})
 	gateway := NewServerGateway()
 
 	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 0,
-		CandidateID:   candidateID,
+		CandidateID:   candidate1ID,
 		LastLogIndex:  0,
 		LastLogTerm:   0,
 	})
 
-	if newState != nil {
-		t.Errorf("State changed unexpectedly to %s", newState.Name())
-	}
-
-	if !response.VoteGranted {
-		t.Error("Vote not granted as expected")
-	}
-
-	if persistentStorage.VotedFor() != candidateID {
-		t.Errorf("Unexpected candidate selected, expected: %s, was: %s", candidateID, persistentStorage.VotedFor())
-	}
+	equals(t, newState, nil)
+	equals(t, response.VoteGranted, true)
+	equals(t, persistentStorage.VotedFor(), candidate1ID)
 }
 
 func TestRequestVoteIsAbleToGetVoteForNonInitialTerm(t *testing.T) {
-	candidateID := ServerID("candidate1.candidates.local")
-
 	persistentStorage := NewMemoryStorage()
+	persistentStorage.SetCurrentTerm(2)
+
 	volatileStorage := &VolatileStorage{}
-	discovery := NewStaticDiscovery([]ServerID{candidateID})
+	discovery := NewStaticDiscovery([]ServerID{candidate1ID})
 	gateway := NewServerGateway()
 
 	persistentStorage.AppendLog(LogEntry{
@@ -57,27 +53,17 @@ func TestRequestVoteIsAbleToGetVoteForNonInitialTerm(t *testing.T) {
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 2,
-		CandidateID:   candidateID,
+		CandidateID:   candidate1ID,
 		LastLogIndex:  3,
 		LastLogTerm:   1,
 	})
 
-	if newState != nil {
-		t.Errorf("State changed unexpectedly to %s", newState.Name())
-	}
-
-	if !response.VoteGranted {
-		t.Error("Vote not granted")
-	}
-
-	if persistentStorage.VotedFor() != candidateID {
-		t.Errorf("Unexpected candidate selected, expected: %s, was: %s", candidateID, persistentStorage.VotedFor())
-	}
+	equals(t, newState, nil)
+	equals(t, response.VoteGranted, true)
+	equals(t, persistentStorage.VotedFor(), candidate1ID)
 }
 
 func TestRequestVoteOnlyOneCandidateCanGetAVoteWithinATerm(t *testing.T) {
-	candidate1ID := ServerID("candidate1.candidates.local")
-	candidate2ID := ServerID("candidate2.candidates.local")
 
 	persistentStorage := NewMemoryStorage()
 	volatileStorage := &VolatileStorage{}
@@ -95,15 +81,7 @@ func TestRequestVoteOnlyOneCandidateCanGetAVoteWithinATerm(t *testing.T) {
 		LastLogTerm:   0,
 	})
 
-	if newState != nil {
-		t.Errorf("State changed unexpectedly to %s", newState.Name())
-	}
-
-	if response.VoteGranted {
-		t.Error("Vote was granted when other candidate should own the vote")
-	}
-
-	if persistentStorage.VotedFor() != candidate1ID {
-		t.Errorf("Unexpected candidate selected, expected: %s, was: %s", candidate1ID, persistentStorage.VotedFor())
-	}
+	equals(t, newState, nil)
+	equals(t, response.VoteGranted, false)
+	equals(t, persistentStorage.VotedFor(), candidate1ID)
 }
