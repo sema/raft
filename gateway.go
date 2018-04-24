@@ -1,8 +1,9 @@
 package go_raft
 
 type ServerGateway interface {
-	SendAppendEntriesRPC(name ServerID, request AppendEntriesRequest) AppendEntriesResponse
-	SendRequestVoteRPC(name ServerID, request RequestVoteRequest) RequestVoteResponse
+	SendAppendEntriesRPC(to ServerID, request AppendEntriesRequest) AppendEntriesResponse
+	SendRequestVoteRPC(to ServerID, from ServerID, term Term, lastLogIndex LogIndex, lastLogTerm Term)
+	SendRequestVoteResponseRPC(to ServerID, from ServerID, term Term, voteGranted bool)
 }
 
 type localGateway struct {
@@ -15,13 +16,29 @@ func NewLocalServerGateway(servers map[ServerID]Server) ServerGateway {
 	}
 }
 
-func (g *localGateway) SendAppendEntriesRPC(name ServerID, request AppendEntriesRequest) AppendEntriesResponse {
+func (g *localGateway) SendAppendEntriesRPC(to ServerID, request AppendEntriesRequest) AppendEntriesResponse {
 	// TODO actually check for this
 	// assert request.prevLogIndex + len(request.entries) >= request.leaderCommit
 	panic("implement me")
 }
 
-func (g *localGateway) SendRequestVoteRPC(name ServerID, request RequestVoteRequest) RequestVoteResponse {
-	server := g.servers[name]
-	return server.RequestVote(request)
+func (g *localGateway) SendRequestVoteRPC(to ServerID, from ServerID, term Term, lastLogIndex LogIndex, lastLogTerm Term) {
+	server := g.servers[to]
+	server.SendCommand(Command{
+		Kind: cmdVoteFor,
+		From: from,
+		Term: term,
+		LastLogIndex: lastLogIndex,
+		LastLogTerm: lastLogTerm,
+	})
+}
+
+func (g *localGateway) SendRequestVoteResponseRPC(to ServerID, from ServerID, term Term, voteGranted bool) {
+	server := g.servers[to]
+	server.SendCommand(Command{
+		Kind: cmdVoteForResponse,
+		Term: term,
+		VoteGranted: voteGranted,
+		From: from,
+	})
 }

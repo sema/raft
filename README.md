@@ -39,3 +39,104 @@ Insight: Each server has its own event sequence, and the set of all event sequen
   - Faults are not easy to model, as they may not always generate events. Fake "faulty" events may be necessary
 - Random fuzz testing must rely on user generated events, and fault injection + quick test style bi-simulation to validate the outcome or general assertions
   - Timing is again an issue here, may require a "ticker" based timing system
+
+
+server -> stateContext -> serverState
+monitor
+
+[external]     / [internal]
+(thin wrapper)  (event queue processing and state swap)  (implements handling of events)
+server ->       interpreter  ->                          interpreterMode
+                   ^- monitor                                <-
+
+
+
+	// Heartbeat monitor
+    //   Trigger leader election if no heartbeat has been observed within deadline for a term. Reset timer
+    //   on term change and on heartbeat (for given term). If deadline is exceeded then trigger change for term.
+    //   Input:
+    //     - term change
+    //     - heartbeat (+ term it belongs to)
+    //     - (optional) mode change, to disable/enable events (alternative, have modes ignore the event)
+
+	// Leader election
+    //   Start election at specific term, and return back with result (and known term) at some point
+    //   Input:
+    //     - mode change (+ term at mode change)
+    //       + needs access to log data
+
+	// Heartbeat
+	//   Send heartbeat data with precise term for leader, possibly other values should also be exact
+	//   relative to term? Need to eagerly trigger heartbeats when new logs are ingested.
+	//   Input:
+	//     - mode change (+ term at mode change)
+	//       + needs access to log data
+	//     - new logs available
+	// Index updates? Based on heartbeats the index will be incremented. We need to either model this as an event or
+	// allow the leader to update value directly (lock?)
+
+	// Summary
+	// - mode change + term change event
+	// - heartbeat + term
+	// - Log changes
+
+	// Embedded
+	// + Tighter coupling between closely related logic
+	// - Need to create cyclic dependency to pass back events
+
+	// External
+	// - Easier to test and change out
+	// - Need to create a lot of notification features
+
+	// Events
+	//
+	// - AppendEntries
+	// - VoteFor
+	//
+	// - Heartbeat timeout
+	// - Elected as leader
+	// - Heartbeat?
+	//
+	// - Log
+
+
+type commandResultFuture struct {
+	instruction instruction
+	result      chan eventResult
+}
+
+func newInstructionFuture(instruction instruction) *commandResultFuture {
+	return &commandResultFuture{
+		instruction: instruction,
+		result:      make(chan eventResult, 1),
+	}
+}
+
+func (e *commandResultFuture) setResult(success bool, term Term) {
+
+}
+
+func (e *commandResultFuture) getResult() eventResult {
+	return <- e.result
+}
+
+func (i *interpreterImpl) EnqueueEvent(event instruction) eventResult {
+
+}
+
+
+func (i *interpreterImpl) Run() {
+	for {
+		event := <- i.events
+
+		if i.eventHasExpired(event) {
+			// TODO respond with expire outcome
+			continue
+		}
+
+		i.applyModeChange(event)
+		i.applyStateChange(event)
+
+		// TODO check that future got a result, otherwise error
+	}
+}

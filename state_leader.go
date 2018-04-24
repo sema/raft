@@ -1,5 +1,7 @@
 package go_raft
 
+import "fmt"
+
 // LEADER
 // TODO implement using advanced ticker?
 // - upon election, send initial heartbeat
@@ -11,25 +13,16 @@ type leaderState struct {
 	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
-	discovery         Discovery
-	context stateContext
+	discovery         ServerDiscovery
 }
 
-func NewLeaderState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery Discovery, context stateContext) serverState {
-	return &commonState{
-		wrapped: &leaderState{
+func newLeaderState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) serverState {
+	return &leaderState{
 			persistentStorage: persistentStorage,
 			volatileStorage:   volatileStorage,
 			gateway:           gateway,
 			discovery:         discovery,
-			context: context,
-		},
-		persistentStorage: persistentStorage,
-		volatileStorage:   volatileStorage,
-		gateway:           gateway,
-		discovery:         discovery,
-		context: context,
-	}
+		}
 }
 
 func (s *leaderState) Name() (name string) {
@@ -40,33 +33,27 @@ func (s *leaderState) Enter() {
 
 }
 
-func (s *leaderState) HandleRequestVote(request RequestVoteRequest) (response RequestVoteResponse, newState serverState) {
-	// We are currently the leader of this term, and incoming request is of the
-	// same term (otherwise we would have either changed state or rejected request).
+func (s *leaderState) PreExecuteModeChange(command Command) (newMode interpreterMode, newTerm Term) {
+	return existing, 0
+}
+
+func (s *leaderState) Execute(command Command) *CommandResult {
+	switch command.Kind {
+	case cmdVoteFor:
+		return s.handleRequestVote(command)
+	default:
+		panic(fmt.Sprintf("Unexpected Command %s passed to candidate", command.Kind))
+	}
+}
+
+
+func (s *leaderState) handleRequestVote(command Command) *CommandResult {
+	// We are currently the leader of this Term, and incoming request is of the
+	// same Term (otherwise we would have either changed state or rejected request).
 	//
 	// Lets just refrain from voting and hope the caller will turn into a follower
 	// when we send the next heartbeat.
-	return RequestVoteResponse{
-		Term:        s.persistentStorage.CurrentTerm(),
-		VoteGranted: false,
-	}, nil
-}
-
-func (s *leaderState) HandleAppendEntries(request AppendEntriesRequest) (response AppendEntriesResponse, nextState serverState) {
-	// We should never be in this situation - we are the current leader of term X, while another
-	// leader of the same term X is sending us heartbeats/appendEntry requests.
-	//
-	// There should never exist two leaders in the same term. For now, ignore other leader and maintain the split.
-	// TODO handle protocol error
-	return AppendEntriesResponse{
-		Term:    s.persistentStorage.CurrentTerm(),
-		Success: false,
-	}, nil
-}
-
-func (s *leaderState) HandleLeaderElectionTimeout() (newState serverState) {
-	// We are the current leader, thus this event is expected. No-op.
-	return nil
+	return newCommandResult(false, s.persistentStorage.CurrentTerm())
 }
 
 func (s *leaderState) Exit() {

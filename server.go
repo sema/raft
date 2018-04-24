@@ -5,20 +5,21 @@ import "log"
 type Server interface {
 	Run()
 
-	RequestVote(RequestVoteRequest) RequestVoteResponse
-	AppendEntries(AppendEntriesRequest) AppendEntriesResponse
+	SendCommand(Command)
 
 	CurrentStateName() string
 }
 
 type server struct {
-	stateContext     stateContext
+	interpreter interpreter
 	heartbeatMonitor HeartbeatMonitor
+
+	persistentStorage PersistentStorage  // TODO remove this when heartbeat is gone
+	commandQueue chan Command
 }
 
-func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery Discovery, config Config) Server {
-	context := newStateContext(serverID, storage, gateway, discovery)
-	context = newThreadsafeStateContext(context)
+func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Server {
+	interpreter := newInterpreter(serverID, storage, gateway, discovery)
 
 	heartbeatMonitor := NewHeartbeatMonitor(config.LeaderElectionTimeout, config.LeaderElectionTimeoutSplay)
 
@@ -26,37 +27,42 @@ func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGatew
 	// c.leaderElectionTimeoutTimer.Reset(c.LeaderElectionTimeout)
 
 	return &server{
-		stateContext:     context,
+		interpreter: interpreter,
 		heartbeatMonitor: heartbeatMonitor,
+		commandQueue: make(chan Command),
+		persistentStorage: storage,
 	}
 }
 
 func (s *server) Run() {
+	// TODO replace with a ticker model as in the etcd/raft impl?
 	go s.heartbeatMonitor.Run()
 
-	for {
-		select {
-		case <-s.heartbeatMonitor.Signal():
-			s.triggerLeaderElection()
+	go func() {
+		for {
+			select {
+			case <-s.heartbeatMonitor.Signal():
+				s.SendCommand(Command{
+					Kind: cmdStartLeaderElection,
+					Term: s.persistentStorage.CurrentTerm(),
+				})
+			}
 		}
-	}
+	}()
+
+	go func() {
+		for {
+			command := <-s.commandQueue
+			s.interpreter.Execute(command)
+		}
+	}()
 }
 
-func (s *server) RequestVote(request RequestVoteRequest) RequestVoteResponse {
-	log.Print("Event RequestVote")
-	return s.stateContext.RequestVote(request)
-}
-
-func (s *server) AppendEntries(request AppendEntriesRequest) AppendEntriesResponse {
-	log.Print("Event AppendEntries")
-	return s.stateContext.AppendEntries(request)
-}
-
-func (s *server) triggerLeaderElection() {
-	log.Print("Event TriggerLeaderElection")
-	s.stateContext.TriggerLeaderElection()
+func (s *server) SendCommand(command Command) {
+	log.Printf("Adding command %s to queue", command.Kind)
+	s.commandQueue <- command
 }
 
 func (s *server) CurrentStateName() string {
-	return s.stateContext.CurrentStateName()
+	return s.interpreter.ModeName()
 }

@@ -26,8 +26,8 @@ func TestIntegration(t *testing.T) {
 	serversm := make(map[go_raft.ServerID]go_raft.Server)
 
 	for _, serverID := range serverIDs {
-		discovery := go_raft.NewStaticDiscovery(serverIDs)
 		gateway := go_raft.NewLocalServerGateway(serversm)
+		discovery := go_raft.NewStaticDiscovery(serverIDs)
 		persistentStorage := go_raft.NewMemoryStorage()
 
 		server := go_raft.NewServer(serverID, persistentStorage, gateway, discovery, config)

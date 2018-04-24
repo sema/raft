@@ -19,7 +19,7 @@ func (ms *memoryStorage) CurrentTerm() Term {
 
 func (ms *memoryStorage) SetCurrentTerm(newTerm Term) {
 	if newTerm > ms.currentTerm {
-		// Don't clear vote if we are setting the same term multiple times, which might occur in certain edge cases
+		// Don't clear vote if we are setting the same Term multiple times, which might occur in certain edge cases
 		ms.votedFor = ""
 	}
 	ms.currentTerm = newTerm

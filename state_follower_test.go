@@ -14,7 +14,7 @@ func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
 	discovery := NewStaticDiscovery([]ServerID{candidate1ID, candidate2ID})
 	gateway := NewServerGatewayStub()
 
-	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery, nil)
+	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 0,
@@ -49,7 +49,7 @@ func TestRequestVoteIsAbleToGetVoteForNonInitialTerm(t *testing.T) {
 		Index: 3,
 	})
 
-	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery, nil)
+	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 2,
@@ -72,7 +72,7 @@ func TestRequestVoteOnlyOneCandidateCanGetAVoteWithinATerm(t *testing.T) {
 
 	persistentStorage.SetVotedForIfUnset(candidate1ID)
 
-	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery, nil)
+	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 0,

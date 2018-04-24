@@ -1,6 +1,6 @@
 package go_raft
 
-type Discovery interface {
+type ServerDiscovery interface {
 	Servers() []ServerID
 }
 
@@ -8,7 +8,7 @@ type staticDiscovery struct {
 	servers []ServerID
 }
 
-func NewStaticDiscovery(servers []ServerID) Discovery {
+func NewStaticDiscovery(servers []ServerID) ServerDiscovery {
 	return &staticDiscovery{
 		servers: servers,
 	}

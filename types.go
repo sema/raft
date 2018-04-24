@@ -59,10 +59,28 @@ type PersistentStorage interface {
 type serverState interface {
 	Name() string
 
-	HandleRequestVote(RequestVoteRequest) (response RequestVoteResponse, newState serverState)
-	HandleAppendEntries(AppendEntriesRequest) (response AppendEntriesResponse, newState serverState)
-	TriggerLeaderElection() (newState serverState)
+	PreExecuteModeChange(command Command) (newMode interpreterMode, newTerm Term)
+	Execute(command Command) (result *CommandResult)
 
 	Enter()
 	Exit()
 }
+
+type interpreterMode int
+
+const (
+	follower interpreterMode = iota
+	candidate = iota
+	leader = iota
+
+	existing = iota  // special mode to signal a no-op change to modes
+)
+
+/*
+type Command interface {
+	PreExecuteModeChange(mode interpreterMode) (interpreterMode, Term, bool)
+	Execute(mode interpreterMode) *CommandResult
+
+	Term() Term
+}
+*/
