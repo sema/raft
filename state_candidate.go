@@ -57,11 +57,11 @@ func (s *candidateState) handleTick(command Command) *CommandResult {
 		return s.startLeaderElection()
 	}
 
-	return newCommandResult(true, s.persistentStorage.CurrentTerm())
+	return newCommandResult()
 }
 
 func (s *candidateState) startLeaderElection() *CommandResult {
-	result := newCommandResult(true, s.persistentStorage.CurrentTerm())
+	result := newCommandResult()
 	result.ChangeMode(candidate, s.persistentStorage.CurrentTerm() + 1)
 	return result
 }
@@ -71,7 +71,7 @@ func (s *candidateState) handleRequestVote(command Command) (result *CommandResu
 	// skip voting process.
 
 	s.gateway.SendRequestVoteResponseRPC(command.From, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), false)
-	return newCommandResult(false, s.persistentStorage.CurrentTerm())
+	return newCommandResult()
 }
 
 func (s *candidateState) handleRequestVoteResponse(command Command) (result *CommandResult) {
@@ -91,12 +91,12 @@ func (s *candidateState) handleRequestVoteResponse(command Command) (result *Com
 
 	// TODO fail fast if majority rejects leader?
 	if votesPositive > quorum {
-		result = newCommandResult(true, s.persistentStorage.CurrentTerm())
+		result = newCommandResult()
 		result.ChangeMode(leader, s.persistentStorage.CurrentTerm())
 		return result
 	}
 
-	return newCommandResult(false, s.persistentStorage.CurrentTerm())
+	return newCommandResult()
 }
 
 

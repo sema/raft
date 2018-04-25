@@ -42,7 +42,7 @@ func (s *leaderState) Execute(command Command) *CommandResult {
 	case cmdVoteFor:
 		return s.handleRequestVote(command)
 	case cmdTick:
-		return newCommandResult(true, s.persistentStorage.CurrentTerm())  // noop
+		return newCommandResult()  // noop
 	default:
 		panic(fmt.Sprintf("Unexpected Command %s passed to candidate", command.Kind))
 	}
@@ -55,7 +55,7 @@ func (s *leaderState) handleRequestVote(command Command) *CommandResult {
 	//
 	// Lets just refrain from voting and hope the caller will turn into a follower
 	// when we send the next heartbeat.
-	return newCommandResult(false, s.persistentStorage.CurrentTerm())
+	return newCommandResult()
 }
 
 func (s *leaderState) Exit() {

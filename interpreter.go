@@ -11,34 +11,6 @@ type interpreter interface {
 	ModeName() string
 }
 
-type commandKind string
-
-const (
-	cmdAppendEntries = "cmdAppendEntries"
-	cmdVoteFor = "cmdVoteFor"
-	cmdVoteForResponse = "cmdVoteForResponse"
-
-	cmdTick = "cmdTick"
-)
-
-type Command struct {
-	Kind commandKind
-
-	Term Term
-
-	LastLogTerm Term
-	LastLogIndex LogIndex
-
-	PreviousLogTerm Term
-	PreviousLogIndex LogIndex
-
-	LeaderCommit LogIndex
-
-	VoteGranted bool
-
-	From ServerID
-}
-
 type interpreterImpl struct {
 	mode interpreterMode
 	subInterpreters map[interpreterMode]serverState  // TODO rename
@@ -79,7 +51,7 @@ func (i *interpreterImpl) Execute(command Command) *CommandResult {
 	// Commands originating from previous terms are discarded
 	if i.commandHasExpired(command) {
 		log.Printf("Discard command as it has expired")
-		return newCommandResult(false, i.persistentStorage.CurrentTerm())
+		return newCommandResult()
 	}
 
 	// Commands belonging to newer terms change server into a follower

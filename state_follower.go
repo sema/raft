@@ -58,11 +58,11 @@ func (s *followerState) handleTick(command Command) *CommandResult {
 		return s.startLeaderElection()
 	}
 
-	return newCommandResult(true, s.persistentStorage.CurrentTerm())
+	return newCommandResult()
 }
 
 func (s *followerState) startLeaderElection() *CommandResult {
-	result := newCommandResult(true, s.persistentStorage.CurrentTerm())
+	result := newCommandResult()
 	result.ChangeMode(candidate, s.persistentStorage.CurrentTerm() + 1)
 	return result
 }
@@ -75,12 +75,12 @@ func (s *followerState) handleRequestVote(command Command) *CommandResult {
 	voteGranted := s.persistentStorage.VotedFor() == command.From
 
 	s.gateway.SendRequestVoteResponseRPC(command.From, s.volatileStorage.ServerID, currentTerm, voteGranted)
-	return newCommandResult(voteGranted, currentTerm)
+	return newCommandResult()
 }
 
 func (s *followerState) handleAppendEntries(command Command) *CommandResult {
 	if !s.isLogConsistent(command.PreviousLogIndex, command.PreviousLogTerm) {
-		return newCommandResult(false, s.persistentStorage.CurrentTerm())
+		return newCommandResult()
 	}
 
 	// s.persistentStorage.MergeLogs(request.Entries)  // TODO
@@ -95,7 +95,7 @@ func (s *followerState) handleAppendEntries(command Command) *CommandResult {
 		s.volatileStorage.CommitIndex = command.LeaderCommit
 	}
 
-	return newCommandResult(true, s.persistentStorage.CurrentTerm())
+	return newCommandResult()
 }
 
 func (s *followerState) tryVoteForCandidate(lastLogTerm Term, lastLogIndex LogIndex, candidateID ServerID) {
