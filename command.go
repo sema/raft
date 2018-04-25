@@ -46,3 +46,15 @@ func NewCommandVoteForResponse(to ServerID, from ServerID, term Term, voteGrante
 		From: from,
 	}
 }
+
+func newCommandAppendEntries(to ServerID, from ServerID, term Term, leaderCommit LogIndex, previousLogIndex LogIndex, previousLogTerm Term) Command {
+	return Command{
+		Kind: cmdAppendEntries,
+		Term:   term,
+		From:     from,
+		LeaderCommit: leaderCommit,
+		PreviousLogIndex: previousLogIndex,
+		PreviousLogTerm:  previousLogTerm,
+		// TODO actual log entries
+	}
+}

@@ -14,6 +14,8 @@ type leaderState struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         ServerDiscovery
+
+	numTicksSinceLastHeartbeat int
 }
 
 func newLeaderState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) serverState {
@@ -22,6 +24,7 @@ func newLeaderState(persistentStorage PersistentStorage, volatileStorage *Volati
 			volatileStorage:   volatileStorage,
 			gateway:           gateway,
 			discovery:         discovery,
+		    numTicksSinceLastHeartbeat: 0,
 		}
 }
 
@@ -30,7 +33,8 @@ func (s *leaderState) Name() (name string) {
 }
 
 func (s *leaderState) Enter() {
-
+	s.numTicksSinceLastHeartbeat = 0
+	s.broadcastHeartbeat()
 }
 
 func (s *leaderState) PreExecuteModeChange(command Command) (newMode interpreterMode, newTerm Term) {
@@ -42,12 +46,20 @@ func (s *leaderState) Execute(command Command) *CommandResult {
 	case cmdVoteFor:
 		return s.handleRequestVote(command)
 	case cmdTick:
-		return newCommandResult()  // noop
+		return s.handleTick(command)
 	default:
-		panic(fmt.Sprintf("Unexpected Command %s passed to candidate", command.Kind))
+		panic(fmt.Sprintf("Unexpected Command %s passed to leader", command.Kind))
 	}
 }
 
+func (s *leaderState) handleTick(command Command) *CommandResult {
+	if s.numTicksSinceLastHeartbeat > 4 {
+		s.numTicksSinceLastHeartbeat = 0
+		s.broadcastHeartbeat()
+	}
+
+	return newCommandResult()
+}
 
 func (s *leaderState) handleRequestVote(command Command) *CommandResult {
 	// We are currently the leader of this Term, and incoming request is of the
@@ -62,26 +74,23 @@ func (s *leaderState) Exit() {
 
 }
 
-// TODO !!! next big thing
-/*
-func (s *leaderState) heartbeat() {
+func (s *leaderState) broadcastHeartbeat() {
 	for _, serverID := range s.discovery.Servers() {
-		go s.sendSingleHeartbeat(serverID)
+		if serverID == s.volatileStorage.ServerID {
+			continue  // skip self
+		}
+		s.heartbeat(serverID)
 	}
-
 }
 
-func (s *leaderState) sendSingleHeartbeat(targetServer ServerID) {
-	s.gateway.Send(
+func (s *leaderState) heartbeat(targetServer ServerID) {
+	s.gateway.Send(targetServer, newCommandAppendEntries(
 		targetServer,
-		AppendEntriesRequest{
-			LeaderTerm:   s.persistentStorage.CurrentTerm(),
-			LeaderID:     s.volatileStorage.ServerID,
-			LeaderCommit: s.volatileStorage.CommitIndex, // TODO this is not true, needs to be addjusted according to target state
-			PrevLogIndex: LogIndex(0),                   // TODO
-			PrevLogTerm:  Term(0),                       // TODO
-			// Entries  // TODO
-		})
-
+		s.volatileStorage.ServerID,
+		s.persistentStorage.CurrentTerm(),
+		s.volatileStorage.CommitIndex, // TODO this is not true, needs to be addjusted according to target state
+		LogIndex(0),                   // TODO
+		Term(0),                       // TODO
+		// Entries  // TODO
+	))
 }
-*/
