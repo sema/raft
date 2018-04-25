@@ -1,52 +1,38 @@
 package go_raft
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 type Server interface {
 	Run()
-
 	SendCommand(Command)
-
 	CurrentStateName() string
 }
 
 type server struct {
-	interpreter interpreter
-	heartbeatMonitor HeartbeatMonitor
-
-	persistentStorage PersistentStorage  // TODO remove this when heartbeat is gone
+	interpreter      interpreter
+	ticker *time.Ticker
 	commandQueue chan Command
 }
 
 func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Server {
 	interpreter := newInterpreter(serverID, storage, gateway, discovery)
 
-	heartbeatMonitor := NewHeartbeatMonitor(config.LeaderElectionTimeout, config.LeaderElectionTimeoutSplay)
-
-	// TODO send reset signal to monitor on AppendEntries calls
-	// c.leaderElectionTimeoutTimer.Reset(c.LeaderElectionTimeout)
-
 	return &server{
 		interpreter: interpreter,
-		heartbeatMonitor: heartbeatMonitor,
-		commandQueue: make(chan Command),
-		persistentStorage: storage,
+		ticker: time.NewTicker(10 * time.Millisecond),
+		commandQueue: make(chan Command, 100),  // TODO handle deadlocks caused by channel overflow
 	}
 }
 
 func (s *server) Run() {
-	// TODO replace with a ticker model as in the etcd/raft impl?
-	go s.heartbeatMonitor.Run()
-
+	// TODO place somewhere else
 	go func() {
 		for {
-			select {
-			case <-s.heartbeatMonitor.Signal():
-				s.SendCommand(Command{
-					Kind: cmdStartLeaderElection,
-					Term: s.persistentStorage.CurrentTerm(),
-				})
-			}
+			<-s.ticker.C
+			s.tick()
 		}
 	}()
 
@@ -65,4 +51,10 @@ func (s *server) SendCommand(command Command) {
 
 func (s *server) CurrentStateName() string {
 	return s.interpreter.ModeName()
+}
+
+func (s *server) tick() {
+	s.SendCommand(Command{
+		Kind: cmdTick,
+	})
 }

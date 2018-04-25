@@ -18,10 +18,7 @@ const (
 	cmdVoteFor = "cmdVoteFor"
 	cmdVoteForResponse = "cmdVoteForResponse"
 
-	// cmdTick = "cmdTick"
-
-	cmdStartLeaderElection = "cmdStartLeaderElection"
-	cmdElectedAsLeader = "cmdElectedAsLeader"
+	cmdTick = "cmdTick"
 )
 
 type Command struct {
@@ -105,10 +102,18 @@ func (i *interpreterImpl) Execute(command Command) *CommandResult {
 }
 
 func (i *interpreterImpl) commandFromNewTerm(command Command) bool {
+	if command.Kind == cmdTick {  // TODO generalize
+		return false // ticks are exempt
+	}
+
 	return command.Term > i.persistentStorage.CurrentTerm()
 }
 
 func (i *interpreterImpl) commandHasExpired(command Command) bool {
+	if command.Kind == cmdTick {  // TODO generalize
+		return false // ticks are exempt
+	}
+
 	return command.Term < i.persistentStorage.CurrentTerm()
 }
 

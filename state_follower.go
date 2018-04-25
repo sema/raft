@@ -9,6 +9,7 @@ type followerState struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         ServerDiscovery
+	ticksSinceLastHeartbeat int
 }
 
 // TODO reuse the same state objects to reduce GC churn
@@ -18,6 +19,7 @@ func newFollowerState(persistentStorage PersistentStorage, volatileStorage *Vola
 			volatileStorage:   volatileStorage,
 			gateway:           gateway,
 			discovery:         discovery,
+		ticksSinceLastHeartbeat: 0,
 		}
 }
 
@@ -26,7 +28,7 @@ func (s *followerState) Name() (name string) {
 }
 
 func (s *followerState) Enter() {
-
+	s.ticksSinceLastHeartbeat = 0
 }
 
 func (s *followerState) PreExecuteModeChange(command Command) (newMode interpreterMode, newTerm Term) {
@@ -39,14 +41,27 @@ func (s *followerState) Execute(command Command) *CommandResult {
 		return s.handleAppendEntries(command)
 	case cmdVoteFor:
 		return s.handleRequestVote(command)
-	case cmdStartLeaderElection:
-		return s.handleStartLeaderElection(command)
+	// TODO handle cmdVoteResponse
+	case cmdTick:
+		return s.handleTick(command)
 	default:
 		panic(fmt.Sprintf("Unexpected Command %s passed to follower", command.Kind))
 	}
 }
 
-func (s *followerState) handleStartLeaderElection(command Command) *CommandResult {
+func (s *followerState) handleTick(command Command) *CommandResult {
+	s.ticksSinceLastHeartbeat += 1
+
+	// TODO change this into config
+	// TODO add randomization
+	if s.ticksSinceLastHeartbeat > 10 {
+		return s.startLeaderElection()
+	}
+
+	return newCommandResult(true, s.persistentStorage.CurrentTerm())
+}
+
+func (s *followerState) startLeaderElection() *CommandResult {
 	result := newCommandResult(true, s.persistentStorage.CurrentTerm())
 	result.ChangeMode(candidate, s.persistentStorage.CurrentTerm() + 1)
 	return result

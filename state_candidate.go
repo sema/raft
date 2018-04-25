@@ -1,12 +1,16 @@
 package go_raft
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type candidateState struct {
 	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         ServerDiscovery
+
+	ticksSinceLastHeartbeat int
 
 	votes map[ServerID]bool
 }
@@ -17,6 +21,7 @@ func newCandidateState(persistentStorage PersistentStorage, volatileStorage *Vol
 			volatileStorage:   volatileStorage,
 			gateway:           gateway,
 			discovery:         discovery,
+		ticksSinceLastHeartbeat: 0,
 		}
 }
 
@@ -34,8 +39,8 @@ func (s *candidateState) Execute(command Command) (result *CommandResult) {
 		return s.handleRequestVote(command)
 	case cmdVoteForResponse:
 		return s.handleRequestVoteResponse(command)
-	case cmdStartLeaderElection:
-		return s.handleStartLeaderElection(command)
+	case cmdTick:
+		return s.handleTick(command)
 	default:
 		panic(fmt.Sprintf("Unexpected Command %s passed to candidate", command.Kind))
 	}
@@ -45,7 +50,17 @@ func (s *candidateState) Name() (name string) {
 	return "candidate"
 }
 
-func (s *candidateState) handleStartLeaderElection(command Command) *CommandResult {
+func (s *candidateState) handleTick(command Command) *CommandResult {
+	s.ticksSinceLastHeartbeat += 1
+
+	if s.ticksSinceLastHeartbeat > 10 {  // TODO move this into config
+		return s.startLeaderElection()
+	}
+
+	return newCommandResult(true, s.persistentStorage.CurrentTerm())
+}
+
+func (s *candidateState) startLeaderElection() *CommandResult {
 	result := newCommandResult(true, s.persistentStorage.CurrentTerm())
 	result.ChangeMode(candidate, s.persistentStorage.CurrentTerm() + 1)
 	return result
@@ -86,6 +101,8 @@ func (s *candidateState) handleRequestVoteResponse(command Command) (result *Com
 
 
 func (s *candidateState) Enter() {
+	s.ticksSinceLastHeartbeat = 0
+
 	s.votes = make(map[ServerID]bool)
 
 	// vote for ourselves

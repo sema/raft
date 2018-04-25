@@ -41,6 +41,8 @@ func (s *leaderState) Execute(command Command) *CommandResult {
 	switch command.Kind {
 	case cmdVoteFor:
 		return s.handleRequestVote(command)
+	case cmdTick:
+		return newCommandResult(true, s.persistentStorage.CurrentTerm())  // noop
 	default:
 		panic(fmt.Sprintf("Unexpected Command %s passed to candidate", command.Kind))
 	}
