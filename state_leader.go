@@ -62,6 +62,8 @@ func (s *leaderState) Exit() {
 
 }
 
+// TODO !!! next big thing
+/*
 func (s *leaderState) heartbeat() {
 	for _, serverID := range s.discovery.Servers() {
 		go s.sendSingleHeartbeat(serverID)
@@ -70,7 +72,7 @@ func (s *leaderState) heartbeat() {
 }
 
 func (s *leaderState) sendSingleHeartbeat(targetServer ServerID) {
-	s.gateway.SendAppendEntriesRPC(
+	s.gateway.Send(
 		targetServer,
 		AppendEntriesRequest{
 			LeaderTerm:   s.persistentStorage.CurrentTerm(),
@@ -82,7 +84,4 @@ func (s *leaderState) sendSingleHeartbeat(targetServer ServerID) {
 		})
 
 }
-
-func (s *leaderState) TriggerLeaderElection() (newState serverState) {
-	panic("implement me")
-}
+*/

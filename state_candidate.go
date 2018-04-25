@@ -70,7 +70,7 @@ func (s *candidateState) handleRequestVote(command Command) (result *CommandResu
 	// Multiple candidates in same Term. stateContext always votes for itself when entering candidate state, so
 	// skip voting process.
 
-	s.gateway.SendRequestVoteResponseRPC(command.From, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), false)
+	s.gateway.Send(command.From, NewCommandVoteForResponse(command.From, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), false))
 	return newCommandResult()
 }
 
@@ -118,7 +118,7 @@ func (s *candidateState) Enter() {
 		logEntry := s.persistentStorage.LatestLogEntry()
 
 		// TODO retries?
-		s.gateway.SendRequestVoteRPC(serverID, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), logEntry.Index, logEntry.Term)
+		s.gateway.Send(serverID, NewCommandVoteFor(serverID, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), logEntry.Index, logEntry.Term))
 	}
 }
 

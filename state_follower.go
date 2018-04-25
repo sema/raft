@@ -74,7 +74,7 @@ func (s *followerState) handleRequestVote(command Command) *CommandResult {
 
 	voteGranted := s.persistentStorage.VotedFor() == command.From
 
-	s.gateway.SendRequestVoteResponseRPC(command.From, s.volatileStorage.ServerID, currentTerm, voteGranted)
+	s.gateway.Send(command.From, NewCommandVoteForResponse(command.From, s.volatileStorage.ServerID, currentTerm, voteGranted))
 	return newCommandResult()
 }
 
