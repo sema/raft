@@ -79,6 +79,8 @@ func (s *followerState) handleRequestVote(command Command) *CommandResult {
 }
 
 func (s *followerState) handleAppendEntries(command Command) *CommandResult {
+	s.ticksSinceLastHeartbeat = 0
+
 	if !s.isLogConsistent(command.PreviousLogIndex, command.PreviousLogTerm) {
 		return newCommandResult()
 	}

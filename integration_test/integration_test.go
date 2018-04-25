@@ -42,7 +42,7 @@ func TestIntegration(t *testing.T) {
 
 	for {
 		for _, server := range servers {
-			if server.CurrentStateName() == "leader" {
+			if server.CurrentStateName() == "leader2" {
 				return
 			}
 		}

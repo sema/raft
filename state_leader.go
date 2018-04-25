@@ -53,6 +53,8 @@ func (s *leaderState) Execute(command Command) *CommandResult {
 }
 
 func (s *leaderState) handleTick(command Command) *CommandResult {
+	s.numTicksSinceLastHeartbeat += 1
+
 	if s.numTicksSinceLastHeartbeat > 4 {
 		s.numTicksSinceLastHeartbeat = 0
 		s.broadcastHeartbeat()
