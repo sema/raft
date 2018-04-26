@@ -4,6 +4,8 @@ type commandKind string
 
 const (
 	cmdAppendEntries = "cmdAppendEntries"
+	cmdAppendEntriesResponse = "cmdAppendEntriesResponse"
+
 	cmdVoteFor = "cmdVoteFor"
 	cmdVoteForResponse = "cmdVoteForResponse"
 
@@ -26,6 +28,9 @@ type Command struct {
 	VoteGranted bool
 
 	From ServerID
+
+	Success bool
+	MatchIndex LogIndex
 }
 
 func NewCommandVoteFor(to ServerID, from ServerID, term Term, lastLogIndex LogIndex, lastLogTerm Term) Command {
@@ -56,5 +61,15 @@ func newCommandAppendEntries(to ServerID, from ServerID, term Term, leaderCommit
 		PreviousLogIndex: previousLogIndex,
 		PreviousLogTerm:  previousLogTerm,
 		// TODO actual log entries
+	}
+}
+
+func newCommandAppendResponseEntries(to ServerID, from ServerID, term Term, success bool, matchIndex LogIndex) Command {
+	return Command{
+		Kind: cmdAppendEntriesResponse,
+		Term:   term,
+		From:     from,
+		Success: success,
+		MatchIndex: matchIndex,
 	}
 }

@@ -82,6 +82,13 @@ func (s *followerState) handleAppendEntries(command Command) *CommandResult {
 	s.ticksSinceLastHeartbeat = 0
 
 	if !s.isLogConsistent(command.PreviousLogIndex, command.PreviousLogTerm) {
+		s.gateway.Send(command.From, newCommandAppendResponseEntries(
+			command.From,
+			s.volatileStorage.ServerID,
+			s.persistentStorage.CurrentTerm(),
+			false,
+			0))
+
 		return newCommandResult()
 	}
 
@@ -96,6 +103,14 @@ func (s *followerState) handleAppendEntries(command Command) *CommandResult {
 		// locally.
 		s.volatileStorage.CommitIndex = command.LeaderCommit
 	}
+
+	logEntry := s.persistentStorage.LatestLogEntry()
+	s.gateway.Send(command.From, newCommandAppendResponseEntries(
+		command.From,
+		s.volatileStorage.ServerID,
+		s.persistentStorage.CurrentTerm(),
+		true,
+		logEntry.Index))
 
 	return newCommandResult()
 }

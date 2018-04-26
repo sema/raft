@@ -7,8 +7,4 @@ type VolatileStorage struct {
 	CommitIndex      LogIndex
 	LastAppliedIndex LogIndex
 	ServerID         ServerID
-
-	// Volatile - leader
-	NextIndex  LogIndex
-	MatchIndex LogIndex
 }

@@ -41,12 +41,13 @@ func (ms *memoryStorage) ClearVotedFor() {
 }
 
 func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {
-	// TODO this need to be atomic?
-	if index == 0 {
+	index = index - 1  // convert from 1 indexed to 0 indexed
+
+	if index < 0 {
 		return LogEntry{}, false
 	}
 
-	if len(ms.logEntries) < int(index) {
+	if int(index) >= len(ms.logEntries) {
 		return LogEntry{}, false
 	}
 
@@ -71,4 +72,8 @@ func (ms *memoryStorage) LatestLogEntry() (logEntry LogEntry) {
 	}
 
 	return ms.logEntries[len(ms.logEntries)-1]
+}
+
+func (ms *memoryStorage) LogLength() int {
+	return len(ms.logEntries)
 }

@@ -4,6 +4,22 @@ type Term int
 type ServerID string
 type LogIndex int
 
+func MaxLogIndex(v1 LogIndex, v2 LogIndex) LogIndex {
+	if v1 > v2 {
+		return v1
+	}
+
+	return v2
+}
+
+func MinLogIndex(v1 LogIndex, v2 LogIndex) LogIndex {
+	if v1 < v2 {
+		return v1
+	}
+
+	return v2
+}
+
 type LogEntry struct {
 	Term  Term
 	Index LogIndex
@@ -51,6 +67,7 @@ type PersistentStorage interface {
 	Log(index LogIndex) (logEntry LogEntry, ok bool)
 	LatestLogEntry() (logEntry LogEntry)
 	AppendLog(entry LogEntry)
+	LogLength() int
 
 	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms
 	MergeLogs(entries []LogEntry)
