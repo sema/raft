@@ -73,30 +73,30 @@ type PersistentStorage interface {
 	MergeLogs(entries []LogEntry)
 }
 
-type serverState interface {
+type actorModeStrategy interface {
 	Name() string
 
-	PreExecuteModeChange(command Command) (newMode interpreterMode, newTerm Term)
-	Execute(command Command) (result *CommandResult)
+	PreExecuteModeChange(message Message) (newMode actorMode, newTerm Term)
+	Process(message Message) (result *MessageResult)
 
 	Enter()
 	Exit()
 }
 
-type interpreterMode int
+type actorMode int
 
 const (
-	follower interpreterMode = iota
-	candidate = iota
-	leader = iota
+	follower  actorMode = iota
+	candidate           = iota
+	leader              = iota
 
-	existing = iota  // special mode to signal a no-op change to modes
+	existing = iota // special mode to signal a no-op change to modes
 )
 
 /*
-type Command interface {
-	PreExecuteModeChange(mode interpreterMode) (interpreterMode, Term, bool)
-	Execute(mode interpreterMode) *CommandResult
+type Message interface {
+	PreExecuteModeChange(mode actorMode) (actorMode, Term, bool)
+	Process(mode actorMode) *MessageResult
 
 	Term() Term
 }

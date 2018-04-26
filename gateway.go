@@ -1,7 +1,7 @@
 package go_raft
 
 type ServerGateway interface {
-	Send(to ServerID, command Command)
+	Send(to ServerID, message Message)
 }
 
 type localGateway struct {
@@ -14,7 +14,7 @@ func NewLocalServerGateway(servers map[ServerID]Server) ServerGateway {
 	}
 }
 
-func (g *localGateway) Send(to ServerID, command Command) {
+func (g *localGateway) Send(to ServerID, message Message) {
 	server := g.servers[to]
-	server.SendCommand(command)
+	server.SendMessage(message)
 }

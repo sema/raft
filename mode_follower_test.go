@@ -5,7 +5,6 @@ import "testing"
 const candidate1ID = ServerID("candidate1.candidates.local")
 const candidate2ID = ServerID("candidate2.candidates.local")
 
-
 func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
 	persistentStorage := NewMemoryStorage()
 	persistentStorage.SetCurrentTerm(0)
@@ -14,7 +13,7 @@ func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
 	discovery := NewStaticDiscovery([]ServerID{candidate1ID, candidate2ID})
 	gateway := NewServerGatewayStub()
 
-	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
+	state := newFollowerMode(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 0,
@@ -49,7 +48,7 @@ func TestRequestVoteIsAbleToGetVoteForNonInitialTerm(t *testing.T) {
 		Index: 3,
 	})
 
-	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
+	state := newFollowerMode(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 2,
@@ -72,7 +71,7 @@ func TestRequestVoteOnlyOneCandidateCanGetAVoteWithinATerm(t *testing.T) {
 
 	persistentStorage.SetVotedForIfUnset(candidate1ID)
 
-	state := newFollowerState(persistentStorage, volatileStorage, gateway, discovery)
+	state := newFollowerMode(persistentStorage, volatileStorage, gateway, discovery)
 
 	response, newState := state.HandleRequestVote(RequestVoteRequest{
 		CandidateTerm: 0,

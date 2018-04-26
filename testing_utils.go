@@ -1,11 +1,11 @@
 package go_raft
 
 import (
-	"testing"
-	"runtime"
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"testing"
 )
 
 /**

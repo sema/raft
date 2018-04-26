@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-type leaderState struct {
+type leaderMode struct {
 	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
@@ -17,21 +17,21 @@ type leaderState struct {
 	matchIndex map[ServerID]LogIndex
 }
 
-func newLeaderState(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) serverState {
-	return &leaderState{
-			persistentStorage: persistentStorage,
-			volatileStorage:   volatileStorage,
-			gateway:           gateway,
-			discovery:         discovery,
-		    numTicksSinceLastHeartbeat: 0,
-		}
+func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
+	return &leaderMode{
+		persistentStorage:          persistentStorage,
+		volatileStorage:            volatileStorage,
+		gateway:                    gateway,
+		discovery:                  discovery,
+		numTicksSinceLastHeartbeat: 0,
+	}
 }
 
-func (s *leaderState) Name() (name string) {
+func (s *leaderMode) Name() (name string) {
 	return "leader"
 }
 
-func (s *leaderState) Enter() {
+func (s *leaderMode) Enter() {
 	s.numTicksSinceLastHeartbeat = 0
 	s.broadcastHeartbeat()
 
@@ -44,24 +44,24 @@ func (s *leaderState) Enter() {
 	}
 }
 
-func (s *leaderState) PreExecuteModeChange(command Command) (newMode interpreterMode, newTerm Term) {
+func (s *leaderMode) PreExecuteModeChange(message Message) (newMode actorMode, newTerm Term) {
 	return existing, 0
 }
 
-func (s *leaderState) Execute(command Command) *CommandResult {
-	switch command.Kind {
-	case cmdVoteFor:
-		return s.handleRequestVote(command)
-	case cmdTick:
-		return s.handleTick(command)
-	case cmdAppendEntriesResponse:
-		return s.handleAppendEntriesResponse(command)
+func (s *leaderMode) Process(message Message) *MessageResult {
+	switch message.Kind {
+	case msgVoteFor:
+		return s.handleRequestVote(message)
+	case msgTick:
+		return s.handleTick(message)
+	case msgAppendEntriesResponse:
+		return s.handleAppendEntriesResponse(message)
 	default:
-		panic(fmt.Sprintf("Unexpected Command %s passed to leader", command.Kind))
+		panic(fmt.Sprintf("Unexpected Message %s passed to leader", message.Kind))
 	}
 }
 
-func (s *leaderState) handleTick(command Command) *CommandResult {
+func (s *leaderMode) handleTick(message Message) *MessageResult {
 	s.numTicksSinceLastHeartbeat += 1
 
 	if s.numTicksSinceLastHeartbeat > 4 {
@@ -69,54 +69,54 @@ func (s *leaderState) handleTick(command Command) *CommandResult {
 		s.broadcastHeartbeat()
 	}
 
-	return newCommandResult()
+	return newMessageResult()
 }
 
-func (s *leaderState) handleAppendEntriesResponse(command Command) *CommandResult {
-	if !command.Success {
-		if s.matchIndex[command.From] >= LogIndex(0) {
+func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult {
+	if !message.Success {
+		if s.matchIndex[message.From] >= LogIndex(0) {
 			// TODO verify this is correct
 			// We have already received a successful response and adjusted match/next index accordingly.
-			// Skip this command.
-			return newCommandResult()
+			// Skip this message.
+			return newMessageResult()
 		}
 
-		s.nextIndex[command.From] = MaxLogIndex(s.nextIndex[command.From] - 1, 1)
-		s.heartbeat(command.From)
-		return newCommandResult()
+		s.nextIndex[message.From] = MaxLogIndex(s.nextIndex[message.From]-1, 1)
+		s.heartbeat(message.From)
+		return newMessageResult()
 	}
 
-	if s.matchIndex[command.From] > command.MatchIndex {
-		s.matchIndex[command.From] = command.MatchIndex
-		s.nextIndex[command.From] = command.MatchIndex + 1
+	if s.matchIndex[message.From] > message.MatchIndex {
+		s.matchIndex[message.From] = message.MatchIndex
+		s.nextIndex[message.From] = message.MatchIndex + 1
 	}
 
-	return newCommandResult()
+	return newMessageResult()
 }
 
-func (s *leaderState) handleRequestVote(command Command) *CommandResult {
+func (s *leaderMode) handleRequestVote(message Message) *MessageResult {
 	// We are currently the leader of this Term, and incoming request is of the
 	// same Term (otherwise we would have either changed state or rejected request).
 	//
 	// Lets just refrain from voting and hope the caller will turn into a follower
 	// when we send the next heartbeat.
-	return newCommandResult()
+	return newMessageResult()
 }
 
-func (s *leaderState) Exit() {
+func (s *leaderMode) Exit() {
 
 }
 
-func (s *leaderState) broadcastHeartbeat() {
+func (s *leaderMode) broadcastHeartbeat() {
 	for _, serverID := range s.discovery.Servers() {
 		if serverID == s.volatileStorage.ServerID {
-			continue  // skip self
+			continue // skip self
 		}
 		s.heartbeat(serverID)
 	}
 }
 
-func (s *leaderState) heartbeat(targetServer ServerID) {
+func (s *leaderMode) heartbeat(targetServer ServerID) {
 
 	// TODO not 100% sure about this one, should we take into account the size of entries?
 	commitIndex := MinLogIndex(s.volatileStorage.CommitIndex, s.matchIndex[targetServer])
@@ -127,7 +127,7 @@ func (s *leaderState) heartbeat(targetServer ServerID) {
 		panic(fmt.Sprintf("Trying to lookup non-existing log entry (index: %d) during heartbeat", currentIndex))
 	}
 
-	s.gateway.Send(targetServer, newCommandAppendEntries(
+	s.gateway.Send(targetServer, newMessageAppendEntries(
 		targetServer,
 		s.volatileStorage.ServerID,
 		s.persistentStorage.CurrentTerm(),
@@ -150,7 +150,7 @@ func (s *leaderState) heartbeat(targetServer ServerID) {
 // TODO API for adding new entries (essentially triggers new heartbeat)
 // - NA
 
-func (s *leaderState) advanceCommitIndex() {
+func (s *leaderMode) advanceCommitIndex() {
 
 	matchIndexes := []int{}
 

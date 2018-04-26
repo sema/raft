@@ -7,23 +7,23 @@ import (
 
 type Server interface {
 	Run()
-	SendCommand(Command)
+	SendMessage(Message)
 	CurrentStateName() string
 }
 
 type server struct {
-	interpreter      interpreter
-	ticker *time.Ticker
-	commandQueue chan Command
+	interpreter actor
+	ticker      *time.Ticker
+	inbox       chan Message
 }
 
 func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Server {
-	interpreter := newInterpreter(serverID, storage, gateway, discovery)
+	interpreter := newActor(serverID, storage, gateway, discovery)
 
 	return &server{
 		interpreter: interpreter,
-		ticker: time.NewTicker(10 * time.Millisecond),
-		commandQueue: make(chan Command, 100),  // TODO handle deadlocks caused by channel overflow
+		ticker:      time.NewTicker(10 * time.Millisecond),
+		inbox:       make(chan Message, 100), // TODO handle deadlocks caused by channel overflow
 	}
 }
 
@@ -38,15 +38,15 @@ func (s *server) Run() {
 
 	go func() {
 		for {
-			command := <-s.commandQueue
-			s.interpreter.Execute(command)
+			message := <-s.inbox
+			s.interpreter.Process(message)
 		}
 	}()
 }
 
-func (s *server) SendCommand(command Command) {
-	log.Printf("Adding command %s to queue", command.Kind)
-	s.commandQueue <- command
+func (s *server) SendMessage(message Message) {
+	log.Printf("Adding message %s to queue", message.Kind)
+	s.inbox <- message
 }
 
 func (s *server) CurrentStateName() string {
@@ -54,7 +54,7 @@ func (s *server) CurrentStateName() string {
 }
 
 func (s *server) tick() {
-	s.SendCommand(Command{
-		Kind: cmdTick,
+	s.SendMessage(Message{
+		Kind: msgTick,
 	})
 }

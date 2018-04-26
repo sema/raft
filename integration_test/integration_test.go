@@ -1,16 +1,15 @@
 package integration_test
 
 import (
-	"testing"
 	"github/sema/go-raft"
-	"time"
 	"log"
 	"os"
+	"testing"
+	"time"
 )
 
 const server1ID = go_raft.ServerID("server1.servers.local")
 const server2ID = go_raft.ServerID("server2.servers.local")
-
 
 func TestIntegration(t *testing.T) {
 	log.SetOutput(os.Stdout)
@@ -18,7 +17,7 @@ func TestIntegration(t *testing.T) {
 	serverIDs := []go_raft.ServerID{server1ID, server2ID}
 
 	config := go_raft.Config{
-		LeaderElectionTimeout: 100 * time.Millisecond,
+		LeaderElectionTimeout:      100 * time.Millisecond,
 		LeaderElectionTimeoutSplay: 10 * time.Millisecond,
 	}
 
