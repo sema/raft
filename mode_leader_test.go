@@ -8,18 +8,6 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-func testTransitionFromFollowerToLeader(actor go_raft.Actor, gatewayMock *mock_go_raft.MockServerGateway) {
-	testTransitionFromFollowerToCandidate(actor, gatewayMock)
-
-	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntries(
-		peerServer1ID, localServerID, go_raft.Term(1), 0, 0, 0, []go_raft.LogEntry{}))
-	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageAppendEntries(
-		peerServer2ID, localServerID, go_raft.Term(1), 0, 0, 0, []go_raft.LogEntry{}))
-
-	actor.Process(go_raft.NewMessageVoteForResponse(
-		localServerID, peerServer1ID, go_raft.Term(1), true))
-}
-
 func TestEnter__LeaderSendsHeartbeatsToAllPeersUponElection(t *testing.T) {
 	actor, gatewayMock, _, cleanup := newActorTestSetup(t)
 	defer cleanup()

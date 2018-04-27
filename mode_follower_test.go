@@ -3,32 +3,9 @@ package go_raft_test
 import (
 	"github.com/golang/mock/gomock"
 	"github.com/sema/go-raft"
-	"github.com/sema/go-raft/mocks"
 	"testing"
 	"github.com/stretchr/testify/assert"
 )
-
-const localServerID = go_raft.ServerID("server1.servers.local")
-const peerServer1ID = go_raft.ServerID("server2.servers.local")
-const peerServer2ID = go_raft.ServerID("server3.servers.local")
-
-// TODO move test helper methods somewhere else
-// Base test setup for an actor, with in-memory storage, mocked gateway, and 2 peer actors.
-func newActorTestSetup(t *testing.T) (
-	go_raft.Actor, *mock_go_raft.MockServerGateway, go_raft.PersistentStorage, func()) {
-
-	mockCtrl := gomock.NewController(t)
-	cleanup := mockCtrl.Finish
-
-	gatewayMock := mock_go_raft.NewMockServerGateway(mockCtrl)
-	storage := go_raft.NewMemoryStorage()
-	discovery := go_raft.NewStaticDiscovery(
-		[]go_raft.ServerID{localServerID, peerServer1ID, peerServer2ID})
-
-	actor := go_raft.NewActor(localServerID, storage, gatewayMock, discovery)
-
-	return actor, gatewayMock, storage, cleanup
-}
 
 func TestMsgVoteFor__IsAbleToGetAVote(t *testing.T) {
 	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
@@ -179,3 +156,5 @@ func TestMsgAppendEntries__AppendsNewEntriesToLog(t *testing.T) {
 
 // TODO figure out what happens if we have out-of-order heartbeats, and we process and old heartbeat which would then
 // prune entries?
+
+// TODO log statements during tests are annoying

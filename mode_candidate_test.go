@@ -8,21 +8,6 @@ import (
 	"github.com/sema/go-raft/mocks"
 )
 
-func testTransitionFromFollowerToCandidate(actor go_raft.Actor, gatewayMock *mock_go_raft.MockServerGateway) {
-	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageVoteFor(
-		peerServer1ID, localServerID, go_raft.Term(1), 0, 0))
-	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageVoteFor(
-		peerServer2ID, localServerID, go_raft.Term(1), 0, 0))
-
-	testProgressTime(actor, 11)
-}
-
-func testProgressTime(actor go_raft.Actor, numTicks int) {
-	for i := 0; i < numTicks; i++ {
-		actor.Process(go_raft.NewMessageTick(localServerID, localServerID))
-	}
-}
-
 func TestEnter__CandidateIncrementsTermAndSendsVoteForMessagesOnEnter(t *testing.T) {
 	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
