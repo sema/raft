@@ -28,7 +28,7 @@ func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *Volatil
 }
 
 func (s *leaderMode) Name() (name string) {
-	return "leader"
+	return "LeaderMode"
 }
 
 func (s *leaderMode) Enter() {
@@ -44,8 +44,8 @@ func (s *leaderMode) Enter() {
 	}
 }
 
-func (s *leaderMode) PreExecuteModeChange(message Message) (newMode actorMode, newTerm Term) {
-	return existing, 0
+func (s *leaderMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {
+	return ExistingMode, 0
 }
 
 func (s *leaderMode) Process(message Message) *MessageResult {
@@ -57,7 +57,7 @@ func (s *leaderMode) Process(message Message) *MessageResult {
 	case msgAppendEntriesResponse:
 		return s.handleAppendEntriesResponse(message)
 	default:
-		panic(fmt.Sprintf("Unexpected Message %s passed to leader", message.Kind))
+		panic(fmt.Sprintf("Unexpected Message %s passed to LeaderMode", message.Kind))
 	}
 }
 
@@ -95,10 +95,10 @@ func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult
 }
 
 func (s *leaderMode) handleRequestVote(message Message) *MessageResult {
-	// We are currently the leader of this Term, and incoming request is of the
+	// We are currently the LeaderMode of this Term, and incoming request is of the
 	// same Term (otherwise we would have either changed state or rejected request).
 	//
-	// Lets just refrain from voting and hope the caller will turn into a follower
+	// Lets just refrain from voting and hope the caller will turn into a FollowerMode
 	// when we send the next heartbeat.
 	return newMessageResult()
 }
@@ -124,7 +124,7 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 	currentIndex := s.nextIndex[targetServer] - 1
 	logEntry, ok := s.persistentStorage.Log(currentIndex)
 	if !ok {
-		panic(fmt.Sprintf("Trying to lookup non-existing log entry (index: %d) during heartbeat", currentIndex))
+		panic(fmt.Sprintf("Trying to lookup non-ExistingMode log entry (index: %d) during heartbeat", currentIndex))
 	}
 
 	s.gateway.Send(targetServer, newMessageAppendEntries(

@@ -25,12 +25,12 @@ func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *Vola
 	}
 }
 
-func (s *candidateMode) PreExecuteModeChange(message Message) (newMode actorMode, newTerm Term) {
+func (s *candidateMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {
 	if message.Kind == msgAppendEntries {
-		return follower, message.Term
+		return FollowerMode, message.Term
 	}
 
-	return existing, 0
+	return ExistingMode, 0
 }
 
 func (s *candidateMode) Process(message Message) (result *MessageResult) {
@@ -42,12 +42,12 @@ func (s *candidateMode) Process(message Message) (result *MessageResult) {
 	case msgTick:
 		return s.handleTick(message)
 	default:
-		panic(fmt.Sprintf("Unexpected Message %s passed to candidate", message.Kind))
+		panic(fmt.Sprintf("Unexpected Message %s passed to CandidateMode", message.Kind))
 	}
 }
 
 func (s *candidateMode) Name() (name string) {
-	return "candidate"
+	return "CandidateMode"
 }
 
 func (s *candidateMode) handleTick(message Message) *MessageResult {
@@ -62,12 +62,12 @@ func (s *candidateMode) handleTick(message Message) *MessageResult {
 
 func (s *candidateMode) startLeaderElection() *MessageResult {
 	result := newMessageResult()
-	result.ChangeMode(candidate, s.persistentStorage.CurrentTerm()+1)
+	result.ChangeMode(CandidateMode, s.persistentStorage.CurrentTerm()+1)
 	return result
 }
 
 func (s *candidateMode) handleRequestVote(message Message) (result *MessageResult) {
-	// Multiple candidates in same Term. stateContext always votes for itself when entering candidate state, so
+	// Multiple candidates in same Term. stateContext always votes for itself when entering CandidateMode state, so
 	// skip voting process.
 
 	s.gateway.Send(message.From, NewMessageVoteForResponse(message.From, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), false))
@@ -89,10 +89,10 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 
 	quorum := len(s.discovery.Servers()) / 2
 
-	// TODO fail fast if majority rejects leader?
+	// TODO fail fast if majority rejects LeaderMode?
 	if votesPositive > quorum {
 		result = newMessageResult()
-		result.ChangeMode(leader, s.persistentStorage.CurrentTerm())
+		result.ChangeMode(LeaderMode, s.persistentStorage.CurrentTerm())
 		return result
 	}
 
@@ -126,6 +126,6 @@ func (s *candidateMode) Exit() {
 }
 
 // TODO send request vote RPCs to all other leaders
-// If majority of hosts send votes then transition to leader
+// If majority of hosts send votes then transition to LeaderMode
 
-// TODO, remember, this may be triggered while already a candidate, should trigger new election
+// TODO, remember, this may be triggered while already a CandidateMode, should trigger new election

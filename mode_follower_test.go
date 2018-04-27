@@ -1,86 +1,74 @@
-package go_raft
+package go_raft_test
 
-import "testing"
+import (
+	"github.com/golang/mock/gomock"
+	"github.com/sema/go-raft"
+	"github.com/sema/go-raft/mocks"
+	"testing"
+	"github.com/stretchr/testify/assert"
+)
 
-const candidate1ID = ServerID("candidate1.candidates.local")
-const candidate2ID = ServerID("candidate2.candidates.local")
+const localServerID = go_raft.ServerID("server1.servers.local")
+const peerServer1ID = go_raft.ServerID("server2.servers.local")
+const peerServer2ID = go_raft.ServerID("server3.servers.local")
 
-func TestRequestVoteIsAbleToGetVoteForInitialTerm(t *testing.T) {
-	persistentStorage := NewMemoryStorage()
-	persistentStorage.SetCurrentTerm(0)
+// Base test setup for an actor, with in-memory storage, mocked gateway, and 2 peer actors.
+func newActorTestSetup(t *testing.T) (
+	go_raft.Actor, *mock_go_raft.MockServerGateway, go_raft.PersistentStorage, func()) {
 
-	volatileStorage := &VolatileStorage{}
-	discovery := NewStaticDiscovery([]ServerID{candidate1ID, candidate2ID})
-	gateway := NewServerGatewayStub()
+	mockCtrl := gomock.NewController(t)
+	cleanup := func() {
+		mockCtrl.Finish()
+	}
 
-	state := newFollowerMode(persistentStorage, volatileStorage, gateway, discovery)
+	gatewayMock := mock_go_raft.NewMockServerGateway(mockCtrl)
+	storage := go_raft.NewMemoryStorage()
+	discovery := go_raft.NewStaticDiscovery(
+		[]go_raft.ServerID{localServerID, peerServer1ID, peerServer2ID})
 
-	response, newState := state.HandleRequestVote(RequestVoteRequest{
-		CandidateTerm: 0,
-		CandidateID:   candidate1ID,
-		LastLogIndex:  0,
-		LastLogTerm:   0,
-	})
+	actor := go_raft.NewActor(localServerID, storage, gatewayMock, discovery)
 
-	equals(t, newState, nil)
-	equals(t, response.VoteGranted, true)
-	equals(t, persistentStorage.VotedFor(), candidate1ID)
+	return actor, gatewayMock, storage, cleanup
 }
 
-func TestRequestVoteIsAbleToGetVoteForNonInitialTerm(t *testing.T) {
-	persistentStorage := NewMemoryStorage()
-	persistentStorage.SetCurrentTerm(2)
+func TestMsgVoteFor__IsAbleToGetAVote(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
 
-	volatileStorage := &VolatileStorage{}
-	discovery := NewStaticDiscovery([]ServerID{candidate1ID})
-	gateway := NewServerGatewayStub()
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageVoteForResponse(
+		peerServer1ID, localServerID, go_raft.Term(1), true))
 
-	persistentStorage.AppendLog(LogEntry{
-		Term:  0,
-		Index: 1,
-	})
-	persistentStorage.AppendLog(LogEntry{
-		Term:  0,
-		Index: 2,
-	})
-	persistentStorage.AppendLog(LogEntry{
-		Term:  1,
-		Index: 3,
-	})
+	actor.Process(
+		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 0, 0))
 
-	state := newFollowerMode(persistentStorage, volatileStorage, gateway, discovery)
-
-	response, newState := state.HandleRequestVote(RequestVoteRequest{
-		CandidateTerm: 2,
-		CandidateID:   candidate1ID,
-		LastLogIndex:  3,
-		LastLogTerm:   1,
-	})
-
-	equals(t, newState, nil)
-	equals(t, response.VoteGranted, true)
-	equals(t, persistentStorage.VotedFor(), candidate1ID)
+	assert.Equal(t, storage.VotedFor(), peerServer1ID)
 }
 
-func TestRequestVoteOnlyOneCandidateCanGetAVoteWithinATerm(t *testing.T) {
+func TestMsgVoteFor__DoesNotOverwriteExistingVoteInTerm(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
 
-	persistentStorage := NewMemoryStorage()
-	volatileStorage := &VolatileStorage{}
-	discovery := NewStaticDiscovery([]ServerID{candidate1ID, candidate2ID})
-	gateway := NewServerGatewayStub()
+	storage.SetCurrentTerm(go_raft.Term(1))
+	storage.SetVotedForIfUnset(peerServer1ID)
 
-	persistentStorage.SetVotedForIfUnset(candidate1ID)
+	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageVoteForResponse(
+		peerServer2ID, localServerID, go_raft.Term(1), false))
 
-	state := newFollowerMode(persistentStorage, volatileStorage, gateway, discovery)
+	actor.Process(
+		go_raft.NewMessageVoteFor(localServerID, peerServer2ID, go_raft.Term(1), 0, 0))
 
-	response, newState := state.HandleRequestVote(RequestVoteRequest{
-		CandidateTerm: 0,
-		CandidateID:   candidate2ID,
-		LastLogIndex:  0,
-		LastLogTerm:   0,
-	})
+	assert.Equal(t, storage.VotedFor(), peerServer1ID)
+}
 
-	equals(t, newState, nil)
-	equals(t, response.VoteGranted, false)
-	equals(t, persistentStorage.VotedFor(), candidate1ID)
+func TestMsgTick__FollowerEventuallyTransitionsToCandidateAfterXTicks(t *testing.T) {
+	actor, gatewayMock, _, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
+
+	for i := 0; i < 11; i++ {
+		actor.Process(go_raft.NewMessageTick(localServerID, localServerID))
+	}
+
+	assert.Equal(t, go_raft.CandidateMode, actor.Mode())
 }

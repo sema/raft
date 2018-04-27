@@ -72,3 +72,10 @@ func newMessageAppendResponseEntries(to ServerID, from ServerID, term Term, succ
 		MatchIndex: matchIndex,
 	}
 }
+
+func NewMessageTick(to ServerID, from ServerID) Message {
+	return Message{
+		Kind: msgTick,
+		From: from,
+	}
+}

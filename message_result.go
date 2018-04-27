@@ -1,20 +1,20 @@
 package go_raft
 
 type MessageResult struct {
-	// TODO this should not move out of the actor scope
-	// Triggers mode and term change if NewMode != existing.
+	// TODO this should not move out of the Actor scope
+	// Triggers mode and term change if NewMode != ExistingMode.
 	NewTerm Term
-	NewMode actorMode
+	NewMode ActorMode
 }
 
 func newMessageResult() *MessageResult {
 	return &MessageResult{
-		NewMode: existing,
+		NewMode: ExistingMode,
 		NewTerm: 0,
 	}
 }
 
-func (c *MessageResult) ChangeMode(newMode actorMode, newTerm Term) {
+func (c *MessageResult) ChangeMode(newMode ActorMode, newTerm Term) {
 	c.NewMode = newMode
 	c.NewTerm = newTerm
 }

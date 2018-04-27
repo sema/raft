@@ -13,7 +13,7 @@ type followerMode struct {
 }
 
 // TODO reuse the same state objects to reduce GC churn
-func newFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
+func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
 	return &followerMode{
 		persistentStorage:       persistentStorage,
 		volatileStorage:         volatileStorage,
@@ -24,15 +24,15 @@ func newFollowerMode(persistentStorage PersistentStorage, volatileStorage *Volat
 }
 
 func (s *followerMode) Name() (name string) {
-	return "follower"
+	return "FollowerMode"
 }
 
 func (s *followerMode) Enter() {
 	s.ticksSinceLastHeartbeat = 0
 }
 
-func (s *followerMode) PreExecuteModeChange(message Message) (newMode actorMode, newTerm Term) {
-	return existing, 0
+func (s *followerMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {
+	return ExistingMode, 0
 }
 
 func (s *followerMode) Process(message Message) *MessageResult {
@@ -45,7 +45,7 @@ func (s *followerMode) Process(message Message) *MessageResult {
 	case msgTick:
 		return s.handleTick(message)
 	default:
-		panic(fmt.Sprintf("Unexpected Message %s passed to follower", message.Kind))
+		panic(fmt.Sprintf("Unexpected Message %s passed to FollowerMode", message.Kind))
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *followerMode) handleTick(message Message) *MessageResult {
 
 func (s *followerMode) startLeaderElection() *MessageResult {
 	result := newMessageResult()
-	result.ChangeMode(candidate, s.persistentStorage.CurrentTerm()+1)
+	result.ChangeMode(CandidateMode, s.persistentStorage.CurrentTerm()+1)
 	return result
 }
 
@@ -95,8 +95,8 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 	// s.persistentStorage.MergeLogs(request.Entries)  // TODO
 
 	if message.LeaderCommit > s.volatileStorage.CommitIndex {
-		// It is possible that a newly elected leader has a lower commit index
-		// than the previously elected leader. The commit index will eventually
+		// It is possible that a newly elected LeaderMode has a lower commit index
+		// than the previously elected LeaderMode. The commit index will eventually
 		// reach the old point.
 		//
 		// In this implementation, we ensure the commit index never decreases

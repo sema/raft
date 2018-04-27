@@ -76,27 +76,27 @@ type PersistentStorage interface {
 type actorModeStrategy interface {
 	Name() string
 
-	PreExecuteModeChange(message Message) (newMode actorMode, newTerm Term)
+	PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term)
 	Process(message Message) (result *MessageResult)
 
 	Enter()
 	Exit()
 }
 
-type actorMode int
+type ActorMode int
 
 const (
-	follower  actorMode = iota
-	candidate           = iota
-	leader              = iota
+	FollowerMode ActorMode = iota
+	CandidateMode
+	LeaderMode
 
-	existing = iota // special mode to signal a no-op change to modes
+	ExistingMode // special mode to signal a no-op change to modes
 )
 
 /*
 type Message interface {
-	PreExecuteModeChange(mode actorMode) (actorMode, Term, bool)
-	Process(mode actorMode) *MessageResult
+	PreExecuteModeChange(mode ActorMode) (ActorMode, Term, bool)
+	Process(mode ActorMode) *MessageResult
 
 	Term() Term
 }

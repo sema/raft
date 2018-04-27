@@ -12,13 +12,13 @@ type Server interface {
 }
 
 type server struct {
-	interpreter actor
+	interpreter Actor
 	ticker      *time.Ticker
 	inbox       chan Message
 }
 
 func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Server {
-	interpreter := newActor(serverID, storage, gateway, discovery)
+	interpreter := NewActor(serverID, storage, gateway, discovery)
 
 	return &server{
 		interpreter: interpreter,
