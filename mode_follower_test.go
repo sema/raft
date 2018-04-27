@@ -66,9 +66,38 @@ func TestMsgTick__FollowerEventuallyTransitionsToCandidateAfterXTicks(t *testing
 
 	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
 
-	for i := 0; i < 11; i++ {
-		actor.Process(go_raft.NewMessageTick(localServerID, localServerID))
-	}
+	testProgressTime(actor, 11)
 
 	assert.Equal(t, go_raft.CandidateMode, actor.Mode())
 }
+
+func TestMsgVoteFor__IsRejectedIfIfCandidateLogBelongsToOlderTerm(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageVoteForResponse(
+		peerServer1ID, localServerID, go_raft.Term(1), false))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog()  // term 1, index 1
+	storage.AppendLog()  // term 1, index 2
+
+	actor.Process(
+		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 0, 0))
+}
+
+func TestMsgVoteFor__IsRejectedIfIfCandidateLogIsBehindOnIndex(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageVoteForResponse(
+		peerServer1ID, localServerID, go_raft.Term(1), false))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog()  // term 1, index 1
+	storage.AppendLog()  // term 1, index 2
+
+	actor.Process(
+		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 1, 1))
+}
+

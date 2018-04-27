@@ -66,7 +66,7 @@ type PersistentStorage interface {
 
 	Log(index LogIndex) (logEntry LogEntry, ok bool)
 	LatestLogEntry() (logEntry LogEntry)
-	AppendLog(entry LogEntry)
+	AppendLog()
 	LogLength() int
 
 	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms

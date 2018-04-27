@@ -54,8 +54,12 @@ func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {
 	return ms.logEntries[index-1], true
 }
 
-func (ms *memoryStorage) AppendLog(entry LogEntry) {
-	// TODO index check?
+func (ms *memoryStorage) AppendLog() {
+	entry := LogEntry{
+		Term:  ms.currentTerm,
+		Index: LogIndex(len(ms.logEntries) + 1),
+	}
+
 	ms.logEntries = append(ms.logEntries, entry)
 }
 

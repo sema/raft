@@ -126,19 +126,18 @@ func (s *followerMode) tryVoteForCandidate(lastLogTerm Term, lastLogIndex LogInd
 func (s *followerMode) isCandidateLogReplicationUpToDate(lastLogTerm Term, lastLogIndex LogIndex) bool {
 	logEntry := s.persistentStorage.LatestLogEntry()
 
-	if logEntry.Term < lastLogTerm {
-		// Candidate is at a newer Term
-		return true
+	if lastLogTerm < logEntry.Term {
+		// Candidate is at an older Term
+		return false
 	}
 
-	if logEntry.Term == lastLogTerm && logEntry.Index <= lastLogIndex {
-		// Candidate has the same or more log entries for the current Term.
-		// Note: logEntry's Term and index are 0 if we do not have any logs locally yet
-		return true
+	if lastLogTerm == logEntry.Term && lastLogIndex < logEntry.Index {
+		// Candidate is at the same term, but has fewer log entries
+		return false
 	}
 
-	// Candidate is at older Term or has fewer entries
-	return false
+	// Candidate is up to date or newer
+	return true
 }
 
 func (s *followerMode) isLogConsistent(prevLogIndex LogIndex, prevLogTerm Term) bool {
