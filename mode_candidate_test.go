@@ -101,3 +101,22 @@ func TestTick__CandidateStaysACandidateIfVoteFails(t *testing.T) {
 	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
 	assert.Equal(t, go_raft.CandidateMode, actor.Mode())
 }
+
+func TestMsgVoteFor__IsIgnoredByCandidate(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageVoteFor(
+		peerServer1ID, localServerID, go_raft.Term(1), 0, 0))
+	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageVoteFor(
+		peerServer2ID, localServerID, go_raft.Term(1), 0, 0))
+	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageVoteForResponse(
+		peerServer2ID, localServerID, go_raft.Term(1), false))
+
+	testTransitionFromFollowerToCandidate(actor)
+
+	actor.Process(
+		go_raft.NewMessageVoteFor(localServerID, peerServer2ID, go_raft.Term(1), 0, 0))
+
+	assert.Equal(t, storage.VotedFor(), localServerID)
+}
