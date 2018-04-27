@@ -122,10 +122,4 @@ func (s *candidateMode) Enter() {
 }
 
 func (s *candidateMode) Exit() {
-	// TODO we need to to tear down the request votes thing
 }
-
-// TODO send request vote RPCs to all other leaders
-// If majority of hosts send votes then transition to LeaderMode
-
-// TODO, remember, this may be triggered while already a CandidateMode, should trigger new election
