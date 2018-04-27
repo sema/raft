@@ -5,7 +5,7 @@ import (
 )
 
 type Actor interface {
-	Process(message Message) *MessageResult
+	Process(message Message)
 
 	Mode() ActorMode
 	ModeName() string
@@ -45,13 +45,13 @@ func (i *actorImpl) ModeName() string {
 	return i.currentModeStrategy().Name()
 }
 
-func (i *actorImpl) Process(message Message) *MessageResult {
+func (i *actorImpl) Process(message Message) {
 	log.Printf("Process message %s", message.Kind)
 
 	// Messages originating from previous terms are discarded
 	if i.messageHasExpired(message) {
 		log.Printf("Discard message as it has expired")
-		return newMessageResult()
+		return
 	}
 
 	// Messages belonging to newer terms change server into a FollowerMode
@@ -69,8 +69,6 @@ func (i *actorImpl) Process(message Message) *MessageResult {
 	if messageResult.NewMode != ExistingMode {
 		i.changeMode(messageResult.NewMode, messageResult.NewTerm)
 	}
-
-	return messageResult
 }
 
 func (i *actorImpl) messageFromNewTerm(message Message) bool {
