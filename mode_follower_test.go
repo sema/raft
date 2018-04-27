@@ -17,9 +17,7 @@ func newActorTestSetup(t *testing.T) (
 	go_raft.Actor, *mock_go_raft.MockServerGateway, go_raft.PersistentStorage, func()) {
 
 	mockCtrl := gomock.NewController(t)
-	cleanup := func() {
-		mockCtrl.Finish()
-	}
+	cleanup := mockCtrl.Finish
 
 	gatewayMock := mock_go_raft.NewMockServerGateway(mockCtrl)
 	storage := go_raft.NewMemoryStorage()
