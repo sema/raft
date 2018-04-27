@@ -1,8 +1,6 @@
 package go_raft
 
-import (
-	"fmt"
-)
+import "log"
 
 type followerMode struct {
 	persistentStorage       PersistentStorage
@@ -40,12 +38,13 @@ func (s *followerMode) Process(message Message) *MessageResult {
 		return s.handleAppendEntries(message)
 	case msgVoteFor:
 		return s.handleRequestVote(message)
-	// TODO handle cmdVoteResponse
 	case msgTick:
 		return s.handleTick(message)
-	default:
-		panic(fmt.Sprintf("Unexpected Message %s passed to FollowerMode", message.Kind))
 	}
+
+	// Ignore message - allows us to add new messages in the future in a backwards compatible manner
+	log.Printf("Unexpected message (%s) observed in Follower mode", message.Kind)
+	return newMessageResult()
 }
 
 func (s *followerMode) handleTick(message Message) *MessageResult {

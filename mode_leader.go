@@ -3,6 +3,7 @@ package go_raft
 import (
 	"fmt"
 	"sort"
+	"log"
 )
 
 type leaderMode struct {
@@ -56,9 +57,11 @@ func (s *leaderMode) Process(message Message) *MessageResult {
 		return s.handleTick(message)
 	case msgAppendEntriesResponse:
 		return s.handleAppendEntriesResponse(message)
-	default:
-		panic(fmt.Sprintf("Unexpected Message %s passed to LeaderMode", message.Kind))
 	}
+
+	// Ignore message - allows us to add new messages in the future in a backwards compatible manner
+	log.Printf("Unexpected message (%s) observed in Leader mode", message.Kind)
+	return newMessageResult()
 }
 
 func (s *leaderMode) handleTick(message Message) *MessageResult {

@@ -1,7 +1,7 @@
 package go_raft
 
 import (
-	"fmt"
+	"log"
 )
 
 type candidateMode struct {
@@ -41,9 +41,11 @@ func (s *candidateMode) Process(message Message) (result *MessageResult) {
 		return s.handleRequestVoteResponse(message)
 	case msgTick:
 		return s.handleTick(message)
-	default:
-		panic(fmt.Sprintf("Unexpected Message %s passed to CandidateMode", message.Kind))
 	}
+
+	// Ignore message - allows us to add new messages in the future in a backwards compatible manner
+	log.Printf("Unexpected message (%s) observed in Candidate mode", message.Kind)
+	return newMessageResult()
 }
 
 func (s *candidateMode) Name() (name string) {
@@ -89,7 +91,8 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 
 	quorum := len(s.discovery.Servers()) / 2
 
-	// TODO fail fast if majority rejects LeaderMode?
+	// We could fail fast if we detect a quorum of rejects. Only looking at the positive case
+	// is enough for Raft to work however.
 	if votesPositive > quorum {
 		result = newMessageResult()
 		result.ChangeMode(LeaderMode, s.persistentStorage.CurrentTerm())
