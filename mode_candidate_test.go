@@ -61,7 +61,7 @@ func TestAppendEntries__CandidateTransitionsToFollowerIfLeaderIsDetected(t *test
 	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
 
 	actor.Process(go_raft.NewMessageAppendEntries(
-		localServerID, peerServer1ID, go_raft.Term(1), 0, 0, 0))
+		localServerID, peerServer1ID, go_raft.Term(1), 0, 0, 0, []go_raft.LogEntry{}))
 
 	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
 	assert.Equal(t, go_raft.FollowerMode, actor.Mode())

@@ -137,7 +137,7 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		logEntry.Index,
 		logEntry.Term,
 
-		// Entries  // TODO
+		[]LogEntry{},  // TODO add content
 	))
 }
 

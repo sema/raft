@@ -30,6 +30,8 @@ type Message struct {
 
 	Success    bool
 	MatchIndex LogIndex
+
+	LogEntries []LogEntry
 }
 
 func NewMessageVoteFor(to ServerID, from ServerID, term Term, lastLogIndex LogIndex, lastLogTerm Term) Message {
@@ -51,7 +53,7 @@ func NewMessageVoteForResponse(to ServerID, from ServerID, term Term, voteGrante
 	}
 }
 
-func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit LogIndex, previousLogIndex LogIndex, previousLogTerm Term) Message {
+func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit LogIndex, previousLogIndex LogIndex, previousLogTerm Term, logEntries []LogEntry) Message {
 	return Message{
 		Kind:             msgAppendEntries,
 		Term:             term,
@@ -59,11 +61,11 @@ func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit
 		LeaderCommit:     leaderCommit,
 		PreviousLogIndex: previousLogIndex,
 		PreviousLogTerm:  previousLogTerm,
-		// TODO actual log entries
+		LogEntries: logEntries,
 	}
 }
 
-func NewMessageAppendResponseEntries(to ServerID, from ServerID, term Term, success bool, matchIndex LogIndex) Message {
+func NewMessageAppendEntriesResponse(to ServerID, from ServerID, term Term, success bool, matchIndex LogIndex) Message {
 	return Message{
 		Kind:       msgAppendEntriesResponse,
 		Term:       term,

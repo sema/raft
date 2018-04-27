@@ -12,6 +12,7 @@ const localServerID = go_raft.ServerID("server1.servers.local")
 const peerServer1ID = go_raft.ServerID("server2.servers.local")
 const peerServer2ID = go_raft.ServerID("server3.servers.local")
 
+// TODO move test helper methods somewhere else
 // Base test setup for an actor, with in-memory storage, mocked gateway, and 2 peer actors.
 func newActorTestSetup(t *testing.T) (
 	go_raft.Actor, *mock_go_raft.MockServerGateway, go_raft.PersistentStorage, func()) {
@@ -77,8 +78,8 @@ func TestMsgVoteFor__IsRejectedIfIfCandidateLogBelongsToOlderTerm(t *testing.T) 
 		peerServer1ID, localServerID, go_raft.Term(1), false))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog()  // term 1, index 1
-	storage.AppendLog()  // term 1, index 2
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 0, 0))
@@ -92,10 +93,86 @@ func TestMsgVoteFor__IsRejectedIfIfCandidateLogIsBehindOnIndex(t *testing.T) {
 		peerServer1ID, localServerID, go_raft.Term(1), false))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog()  // term 1, index 1
-	storage.AppendLog()  // term 1, index 2
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 1, 1))
 }
 
+func TestMsgAppendEntries__IsRejectedIfPreviousTermAndIndexDoesNotMatch(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
+		peerServer1ID, localServerID, go_raft.Term(1), false, go_raft.LogIndex(0)))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
+
+	actor.Process(
+		go_raft.NewMessageAppendEntries(
+			localServerID, peerServer1ID, go_raft.Term(1), 0, go_raft.LogIndex(3), go_raft.Term(3), []go_raft.LogEntry{}))
+}
+
+func TestMsgAppendEntries__IsAcceptedIfPreviousTermAndIndexMatch(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
+		peerServer1ID, localServerID, go_raft.Term(1), true, go_raft.LogIndex(2)))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
+
+	actor.Process(
+		go_raft.NewMessageAppendEntries(
+			localServerID, peerServer1ID, go_raft.Term(1), 0, go_raft.LogIndex(2), go_raft.Term(1), []go_raft.LogEntry{}))
+}
+
+
+func TestMsgAppendEntries__PrunesOldEntriesIfAfterAgreedPreviousPoint(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
+		peerServer1ID, localServerID, go_raft.Term(3), true, go_raft.LogIndex(2)))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
+
+	storage.SetCurrentTerm(2)
+	storage.AppendLog("")  // term 2, index 3
+	storage.AppendLog("")  // term 2, index 4
+
+	actor.Process(
+		go_raft.NewMessageAppendEntries(
+			localServerID, peerServer1ID, go_raft.Term(3), 0, go_raft.LogIndex(2), go_raft.Term(1), []go_raft.LogEntry{}))
+
+	assert.Equal(t, go_raft.LogIndex(2), storage.LatestLogEntry().Index)
+}
+
+func TestMsgAppendEntries__AppendsNewEntriesToLog(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
+		peerServer1ID, localServerID, go_raft.Term(1), true, go_raft.LogIndex(4)))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
+
+	actor.Process(
+		go_raft.NewMessageAppendEntries(
+			localServerID, peerServer1ID, go_raft.Term(1), 0, go_raft.LogIndex(2), go_raft.Term(1),
+			[]go_raft.LogEntry{
+				go_raft.NewLogEntry(1, 3, ""),
+				go_raft.NewLogEntry(1, 4, ""),
+			}))
+
+	assert.Equal(t, go_raft.LogIndex(4), storage.LatestLogEntry().Index)
+}

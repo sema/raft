@@ -82,7 +82,7 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 	s.ticksSinceLastHeartbeat = 0
 
 	if !s.isLogConsistent(message.PreviousLogIndex, message.PreviousLogTerm) {
-		s.gateway.Send(message.From, NewMessageAppendResponseEntries(
+		s.gateway.Send(message.From, NewMessageAppendEntriesResponse(
 			message.From,
 			s.volatileStorage.ServerID,
 			s.persistentStorage.CurrentTerm(),
@@ -104,8 +104,11 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 		s.volatileStorage.CommitIndex = message.LeaderCommit
 	}
 
+	s.persistentStorage.PruneLogEntriesAfter(message.PreviousLogIndex)
+	s.persistentStorage.AppendLogs(message.LogEntries)
+
 	logEntry := s.persistentStorage.LatestLogEntry()
-	s.gateway.Send(message.From, NewMessageAppendResponseEntries(
+	s.gateway.Send(message.From, NewMessageAppendEntriesResponse(
 		message.From,
 		s.volatileStorage.ServerID,
 		s.persistentStorage.CurrentTerm(),

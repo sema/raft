@@ -23,6 +23,15 @@ func MinLogIndex(v1 LogIndex, v2 LogIndex) LogIndex {
 type LogEntry struct {
 	Term  Term
 	Index LogIndex
+	Payload string
+}
+
+func NewLogEntry(term Term, index LogIndex, payload string) LogEntry {
+	return LogEntry{
+		Term:    term,
+		Index:   index,
+		Payload: payload,
+	}
 }
 
 // AppendEntriesRequest contain the request payload for the AppendEntries RPC
@@ -66,8 +75,10 @@ type PersistentStorage interface {
 
 	Log(index LogIndex) (logEntry LogEntry, ok bool)
 	LatestLogEntry() (logEntry LogEntry)
-	AppendLog()
+	AppendLog(payload string)
 	LogLength() int
+	PruneLogEntriesAfter(index LogIndex)
+	AppendLogs([]LogEntry)
 
 	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms
 	MergeLogs(entries []LogEntry)
