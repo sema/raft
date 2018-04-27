@@ -12,7 +12,6 @@ type followerMode struct {
 	ticksSinceLastHeartbeat int
 }
 
-// TODO reuse the same state objects to reduce GC churn
 func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
 	return &followerMode{
 		persistentStorage:       persistentStorage,
@@ -92,7 +91,8 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 		return newMessageResult()
 	}
 
-	// s.persistentStorage.MergeLogs(request.Entries)  // TODO
+	s.persistentStorage.PruneLogEntriesAfter(message.PreviousLogIndex)
+	s.persistentStorage.AppendLogs(message.LogEntries)
 
 	if message.LeaderCommit > s.volatileStorage.CommitIndex {
 		// It is possible that a newly elected LeaderMode has a lower commit index
@@ -103,9 +103,6 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 		// locally.
 		s.volatileStorage.CommitIndex = message.LeaderCommit
 	}
-
-	s.persistentStorage.PruneLogEntriesAfter(message.PreviousLogIndex)
-	s.persistentStorage.AppendLogs(message.LogEntries)
 
 	logEntry := s.persistentStorage.LatestLogEntry()
 	s.gateway.Send(message.From, NewMessageAppendEntriesResponse(

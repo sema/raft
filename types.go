@@ -79,9 +79,6 @@ type PersistentStorage interface {
 	LogLength() int
 	PruneLogEntriesAfter(index LogIndex)
 	AppendLogs([]LogEntry)
-
-	// Merges entries into the current log, overwriting any entries with overlapping indexes but different terms
-	MergeLogs(entries []LogEntry)
 }
 
 type actorModeStrategy interface {

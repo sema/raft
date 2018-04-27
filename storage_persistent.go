@@ -71,10 +71,6 @@ func (ms *memoryStorage) AppendLog(payload string) {
 	ms.logEntries = append(ms.logEntries, entry)
 }
 
-func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
-	panic("implement me")
-}
-
 func (ms *memoryStorage) LatestLogEntry() (logEntry LogEntry) {
 	if len(ms.logEntries) == 0 {
 		return LogEntry{

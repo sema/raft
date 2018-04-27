@@ -176,3 +176,6 @@ func TestMsgAppendEntries__AppendsNewEntriesToLog(t *testing.T) {
 
 	assert.Equal(t, go_raft.LogIndex(4), storage.LatestLogEntry().Index)
 }
+
+// TODO figure out what happens if we have out-of-order heartbeats, and we process and old heartbeat which would then
+// prune entries?
