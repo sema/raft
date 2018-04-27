@@ -127,7 +127,7 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		panic(fmt.Sprintf("Trying to lookup non-ExistingMode log entry (index: %d) during heartbeat", currentIndex))
 	}
 
-	s.gateway.Send(targetServer, newMessageAppendEntries(
+	s.gateway.Send(targetServer, NewMessageAppendEntries(
 		targetServer,
 		s.volatileStorage.ServerID,
 		s.persistentStorage.CurrentTerm(),

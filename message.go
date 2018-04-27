@@ -51,7 +51,7 @@ func NewMessageVoteForResponse(to ServerID, from ServerID, term Term, voteGrante
 	}
 }
 
-func newMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit LogIndex, previousLogIndex LogIndex, previousLogTerm Term) Message {
+func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit LogIndex, previousLogIndex LogIndex, previousLogTerm Term) Message {
 	return Message{
 		Kind:             msgAppendEntries,
 		Term:             term,
@@ -63,7 +63,7 @@ func newMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit
 	}
 }
 
-func newMessageAppendResponseEntries(to ServerID, from ServerID, term Term, success bool, matchIndex LogIndex) Message {
+func NewMessageAppendResponseEntries(to ServerID, from ServerID, term Term, success bool, matchIndex LogIndex) Message {
 	return Message{
 		Kind:       msgAppendEntriesResponse,
 		Term:       term,
