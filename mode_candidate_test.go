@@ -65,3 +65,39 @@ func TestTick__CandidateTransitionsToFollowerIfLeaderIsDetected(t *testing.T) {
 	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
 	assert.Equal(t, go_raft.FollowerMode, actor.Mode())
 }
+
+func TestTick__CandidateTransitionsToLeaderIfEnoughVotesSucceed(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
+
+	testTransitionFromFollowerToCandidate(actor)
+
+	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+
+	actor.Process(go_raft.NewMessageVoteForResponse(
+		localServerID, peerServer1ID, go_raft.Term(1), true))
+
+	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, go_raft.LeaderMode, actor.Mode())
+}
+
+func TestTick__CandidateStaysACandidateIfVoteFails(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
+
+	testTransitionFromFollowerToCandidate(actor)
+
+	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+
+	actor.Process(go_raft.NewMessageVoteForResponse(
+		localServerID, peerServer1ID, go_raft.Term(1), false))
+	actor.Process(go_raft.NewMessageVoteForResponse(
+		localServerID, peerServer2ID, go_raft.Term(1), false))
+
+	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, go_raft.CandidateMode, actor.Mode())
+}

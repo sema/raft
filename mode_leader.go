@@ -124,7 +124,7 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 	currentIndex := s.nextIndex[targetServer] - 1
 	logEntry, ok := s.persistentStorage.Log(currentIndex)
 	if !ok {
-		panic(fmt.Sprintf("Trying to lookup non-ExistingMode log entry (index: %d) during heartbeat", currentIndex))
+		panic(fmt.Sprintf("Trying to lookup nonexisting log entry (index: %d) during heartbeat", currentIndex))
 	}
 
 	s.gateway.Send(targetServer, NewMessageAppendEntries(

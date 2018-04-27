@@ -44,7 +44,7 @@ func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {
 	index = index - 1 // convert from 1 indexed to 0 indexed
 
 	if index < 0 {
-		return LogEntry{}, false
+		return LogEntry{}, true  // special sentinel value
 	}
 
 	if int(index) >= len(ms.logEntries) {
