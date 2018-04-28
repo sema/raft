@@ -8,11 +8,11 @@ import (
 )
 
 func TestEnter__LeaderSendsHeartbeatsToAllPeersUponElection(t *testing.T) {
-	actor, gatewayMock, _, cleanup := newActorTestSetup(t)
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	// Assertions that heartbeats are sent are in test function
-	testTransitionFromFollowerToLeader(actor, gatewayMock)
+	testTransitionFromFollowerToLeader(actor, gatewayMock, storage)
 }
 
 
@@ -20,7 +20,7 @@ func TestAppendEntries__LeaderTransitionsToFollowerIfNewLeaderIsDetected(t *test
 	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
-	testTransitionFromFollowerToLeader(actor, gatewayMock)
+	testTransitionFromFollowerToLeader(actor, gatewayMock, storage)
 
 	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
 
@@ -33,6 +33,30 @@ func TestAppendEntries__LeaderTransitionsToFollowerIfNewLeaderIsDetected(t *test
 	assert.Equal(t, go_raft.FollowerMode, actor.Mode())
 }
 
+func TestEnter__LeaderRepeatsHeartbeatsWithDecrementingPrevPointUntilFollowersAck(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	storage.AppendLog("")  // index 1, term 0
+	storage.AppendLog("")  // index 2, term 0
+	storage.AppendLog("")  // index 3, term 0
+	storage.AppendLog("")  // index 4, term 0
+
+	testTransitionFromFollowerToLeader(actor, gatewayMock, storage)
+
+	for i := 3; i >= 1; i-- {
+		// Reject responses should decrease prev point
+		gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntries(
+			peerServer1ID, localServerID, go_raft.Term(1), 0, go_raft.LogIndex(i), 0, []go_raft.LogEntry{}))
+		gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageAppendEntries(
+			peerServer2ID, localServerID, go_raft.Term(1), 0, go_raft.LogIndex(i), 0, []go_raft.LogEntry{}))
+
+		actor.Process(go_raft.NewMessageAppendEntriesResponse(
+			localServerID, peerServer1ID, 1, false, 0))
+		actor.Process(go_raft.NewMessageAppendEntriesResponse(
+			localServerID, peerServer2ID, 1, false, 0))
+	}
+}
 
 // TEST heartbeat is repeated until client responds OK
 // TEST adding log entry triggers new heartbeat

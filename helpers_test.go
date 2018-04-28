@@ -28,11 +28,14 @@ func newActorTestSetup(t *testing.T) (
 	return actor, gatewayMock, storage, cleanup
 }
 
-func testTransitionFromFollowerToCandidate(actor go_raft.Actor, gatewayMock *mock_go_raft.MockServerGateway) {
+func testTransitionFromFollowerToCandidate(actor go_raft.Actor, gatewayMock *mock_go_raft.MockServerGateway, storage go_raft.PersistentStorage) {
+	prevIndex := storage.LatestLogEntry().Index
+	prevTerm := storage.LatestLogEntry().Term
+
 	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageVoteFor(
-		peerServer1ID, localServerID, go_raft.Term(1), 0, 0))
+		peerServer1ID, localServerID, go_raft.Term(1), prevIndex, prevTerm))
 	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageVoteFor(
-		peerServer2ID, localServerID, go_raft.Term(1), 0, 0))
+		peerServer2ID, localServerID, go_raft.Term(1), prevIndex, prevTerm))
 
 	testProgressTime(actor, 11)
 }
@@ -43,13 +46,16 @@ func testProgressTime(actor go_raft.Actor, numTicks int) {
 	}
 }
 
-func testTransitionFromFollowerToLeader(actor go_raft.Actor, gatewayMock *mock_go_raft.MockServerGateway) {
-	testTransitionFromFollowerToCandidate(actor, gatewayMock)
+func testTransitionFromFollowerToLeader(actor go_raft.Actor, gatewayMock *mock_go_raft.MockServerGateway, storage go_raft.PersistentStorage) {
+	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
+
+	prevIndex := storage.LatestLogEntry().Index
+	prevTerm := storage.LatestLogEntry().Term
 
 	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntries(
-		peerServer1ID, localServerID, go_raft.Term(1), 0, 0, 0, []go_raft.LogEntry{}))
+		peerServer1ID, localServerID, go_raft.Term(1), 0, prevIndex, prevTerm, []go_raft.LogEntry{}))
 	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageAppendEntries(
-		peerServer2ID, localServerID, go_raft.Term(1), 0, 0, 0, []go_raft.LogEntry{}))
+		peerServer2ID, localServerID, go_raft.Term(1), 0, prevIndex, prevTerm, []go_raft.LogEntry{}))
 
 	actor.Process(go_raft.NewMessageVoteForResponse(
 		localServerID, peerServer1ID, go_raft.Term(1), true))

@@ -76,14 +76,11 @@ func (s *leaderMode) handleTick(message Message) *MessageResult {
 	return newMessageResult()
 }
 
+// Described in (3.5)
 func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult {
 	if !message.Success {
-		if s.matchIndex[message.From] >= LogIndex(0) {
-			// TODO verify this is correct
-			// We have already received a successful response and adjusted match/next index accordingly.
-			// Skip this message.
-			return newMessageResult()
-		}
+		// TODO we don't necessarily want out-of-order AppendEntries rejection responses triggering a decrement of
+		// nextIndex. Out-of-order messages will not break any guarantees, but may trigger inefficiencies.
 
 		s.nextIndex[message.From] = MaxLogIndex(s.nextIndex[message.From]-1, 1)
 		s.heartbeat(message.From)
