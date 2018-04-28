@@ -52,8 +52,6 @@ func (s *leaderMode) PreExecuteModeChange(message Message) (newMode ActorMode, n
 
 func (s *leaderMode) Process(message Message) *MessageResult {
 	switch message.Kind {
-	case msgVoteFor:
-		return s.handleRequestVote(message)
 	case msgTick:
 		return s.handleTick(message)
 	case msgAppendEntriesResponse:
@@ -87,20 +85,11 @@ func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult
 		return newMessageResult()
 	}
 
-	if s.matchIndex[message.From] > message.MatchIndex {
+	if s.matchIndex[message.From] < message.MatchIndex {
 		s.matchIndex[message.From] = message.MatchIndex
 		s.nextIndex[message.From] = message.MatchIndex + 1
 	}
 
-	return newMessageResult()
-}
-
-func (s *leaderMode) handleRequestVote(message Message) *MessageResult {
-	// We are currently the LeaderMode of this Term, and incoming request is of the
-	// same Term (otherwise we would have either changed state or rejected request).
-	//
-	// Lets just refrain from voting and hope the caller will turn into a FollowerMode
-	// when we send the next heartbeat.
 	return newMessageResult()
 }
 
@@ -141,9 +130,6 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		[]LogEntry{},  // TODO add content
 	))
 }
-
-// TODO Implement protocol for deciding remote server position on initial election
-// - success/failure feedback (bonus for actual position)
 
 // TODO Maintain commit index
 // - requires feedback on successful replication
