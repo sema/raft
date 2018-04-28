@@ -89,11 +89,9 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 		}
 	}
 
-	quorum := len(s.discovery.Servers()) / 2
-
 	// We could fail fast if we detect a quorum of rejects. Only looking at the positive case
 	// is enough for Raft to work however.
-	if votesPositive > quorum {
+	if votesPositive >= s.discovery.Quorum() {
 		result = newMessageResult()
 		result.ChangeMode(LeaderMode, s.persistentStorage.CurrentTerm())
 		return result

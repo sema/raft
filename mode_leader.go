@@ -88,6 +88,7 @@ func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult
 	if s.matchIndex[message.From] < message.MatchIndex {
 		s.matchIndex[message.From] = message.MatchIndex
 		s.nextIndex[message.From] = message.MatchIndex + 1
+		s.advanceCommitIndex()
 	}
 
 	return newMessageResult()
@@ -131,24 +132,20 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 	))
 }
 
-// TODO Maintain commit index
-// - requires feedback on successful replication
-
 // TODO API for adding new entries (essentially triggers new heartbeat)
 // - NA
 
 func (s *leaderMode) advanceCommitIndex() {
-
-	matchIndexes := []int{}
+	var matchIndexes []int
 
 	for _, index := range s.matchIndex {
 		matchIndexes = append(matchIndexes, int(index))
 	}
 
 	sort.Ints(matchIndexes)
-	quorum := len(s.discovery.Servers()) / 2
 
-	quorumIndex := LogIndex(matchIndexes[quorum])
+	quorum := s.discovery.Quorum()
+	quorumIndex := LogIndex(matchIndexes[quorum - 1])
 
 	// TODO not 100% sure about this part
 	if s.volatileStorage.CommitIndex < quorumIndex {
