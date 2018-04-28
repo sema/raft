@@ -43,6 +43,8 @@ func (s *leaderMode) Enter() {
 		s.matchIndex[serverID] = 0
 	}
 
+	s.matchIndex[s.volatileStorage.ServerID] = s.persistentStorage.LatestLogEntry().Index
+
 	s.broadcastHeartbeat()
 }
 
@@ -86,6 +88,7 @@ func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult
 	}
 
 	if s.matchIndex[message.From] < message.MatchIndex {
+		log.Printf("Setting matchIndex for %s to %d", message.From, message.MatchIndex)
 		s.matchIndex[message.From] = message.MatchIndex
 		s.nextIndex[message.From] = message.MatchIndex + 1
 		s.advanceCommitIndex()
@@ -108,8 +111,6 @@ func (s *leaderMode) broadcastHeartbeat() {
 }
 
 func (s *leaderMode) heartbeat(targetServer ServerID) {
-
-	// TODO not 100% sure about this one, should we take into account the size of entries?
 	commitIndex := MinLogIndex(s.volatileStorage.CommitIndex, s.matchIndex[targetServer])
 
 	currentIndex := s.nextIndex[targetServer] - 1
@@ -147,8 +148,8 @@ func (s *leaderMode) advanceCommitIndex() {
 	quorum := s.discovery.Quorum()
 	quorumIndex := LogIndex(matchIndexes[quorum - 1])
 
-	// TODO not 100% sure about this part
 	if s.volatileStorage.CommitIndex < quorumIndex {
+		log.Printf("Increasing commitIndex to %d (%v)", quorumIndex, s.matchIndex)
 		s.volatileStorage.CommitIndex = quorumIndex
 	}
 }
