@@ -90,8 +90,7 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 		return newMessageResult()
 	}
 
-	s.persistentStorage.PruneLogEntriesAfter(message.PreviousLogIndex)
-	s.persistentStorage.AppendLogs(message.LogEntries)
+	s.persistentStorage.MergeLogs(message.LogEntries)
 
 	if message.LeaderCommit > s.volatileStorage.CommitIndex {
 		// It is possible that a newly elected LeaderMode has a lower commit index
@@ -140,11 +139,6 @@ func (s *followerMode) isCandidateLogReplicationUpToDate(lastLogTerm Term, lastL
 }
 
 func (s *followerMode) isLogConsistent(prevLogIndex LogIndex, prevLogTerm Term) bool {
-	if prevLogIndex == 0 && prevLogTerm == 0 {
-		// Base case - no previous log entries in log
-		return true
-	}
-
 	logEntry, exists := s.persistentStorage.Log(prevLogIndex)
 	if exists && logEntry.Term == prevLogTerm {
 		// Induction case - previous log entry consistent

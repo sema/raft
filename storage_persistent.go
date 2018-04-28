@@ -45,20 +45,18 @@ func (ms *memoryStorage) ClearVotedFor() {
 }
 
 func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {
-	index = index - 1 // convert from 1 indexed to 0 indexed
-
-	if index < 0 {
-		return LogEntry{  // special sentinel value
-			Term: 0,
-			Index: 0,
-		}, true
+	if index == 0 {
+		// Base case - no previous log entries in log
+		return NewLogEntry(0, 0, ""), true
 	}
+
+	index = index - 1 // convert from 1 indexed to 0 indexed
 
 	if int(index) >= len(ms.logEntries) {
 		return LogEntry{}, false
 	}
 
-	return ms.logEntries[index-1], true
+	return ms.logEntries[index], true
 }
 
 func (ms *memoryStorage) AppendLog(payload string) {
@@ -86,22 +84,29 @@ func (ms *memoryStorage) LogLength() int {
 	return len(ms.logEntries)
 }
 
-func (ms *memoryStorage) PruneLogEntriesAfter(index LogIndex) {
+func (ms *memoryStorage) pruneLogEntriesAfter(index LogIndex) {
 	index = index - 1 // convert from 1 indexed to 0 indexed
-
 	ms.logEntries = ms.logEntries[:index+1]
 }
 
-func (ms *memoryStorage) AppendLogs(entries []LogEntry) {
-	if len(entries) > 0 {
-		lastOldIndex := ms.LatestLogEntry().Index
-		firstNewIndex := entries[0].Index
-		if lastOldIndex +1 != firstNewIndex {
-			log.Panicf("Trying to append log entries starting with index %d to logs ending with index %d", firstNewIndex, lastOldIndex)
-		}
-	}
+func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
+	nextIndex := ms.LatestLogEntry().Index + 1
 
 	for _, entry := range entries {
-		ms.logEntries = append(ms.logEntries, entry)
+		if entry.Index < nextIndex {
+			// Merge existing entry
+			index := entry.Index-1
+			if ms.logEntries[index].Term != entry.Term {
+				// Only merge if terms differ, otherwise Raft guarantees that this entry and all following entries match
+				ms.pruneLogEntriesAfter(entry.Index)
+				ms.logEntries[index] = entry
+			}
+		} else if entry.Index == nextIndex {
+			// Append
+			ms.logEntries = append(ms.logEntries, entry)
+			nextIndex += 1
+		} else {
+			log.Panicf("Trying to append log entries starting with index %d to logs ending with index %d", entry.Index, nextIndex-1)
+		}
 	}
 }

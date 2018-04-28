@@ -77,8 +77,7 @@ type PersistentStorage interface {
 	LatestLogEntry() (logEntry LogEntry)
 	AppendLog(payload string)
 	LogLength() int
-	PruneLogEntriesAfter(index LogIndex)
-	AppendLogs([]LogEntry)
+	MergeLogs([]LogEntry)
 }
 
 type actorModeStrategy interface {

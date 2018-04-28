@@ -5,7 +5,6 @@ import (
 	"github.com/sema/go-raft"
 	"github.com/stretchr/testify/assert"
 	"github.com/golang/mock/gomock"
-	"github.com/sema/go-raft/mocks"
 )
 
 func TestEnter__CandidateIncrementsTermAndSendsVoteForMessagesOnEnter(t *testing.T) {

@@ -109,29 +109,6 @@ func TestMsgAppendEntries__IsAcceptedIfPreviousTermAndIndexMatch(t *testing.T) {
 			localServerID, peerServer1ID, go_raft.Term(1), 0, go_raft.LogIndex(2), go_raft.Term(1), []go_raft.LogEntry{}))
 }
 
-
-func TestMsgAppendEntries__PrunesOldEntriesIfAfterAgreedPreviousPoint(t *testing.T) {
-	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
-	defer cleanup()
-
-	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
-		peerServer1ID, localServerID, go_raft.Term(3), true, go_raft.LogIndex(2)))
-
-	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
-
-	storage.SetCurrentTerm(2)
-	storage.AppendLog("")  // term 2, index 3
-	storage.AppendLog("")  // term 2, index 4
-
-	actor.Process(
-		go_raft.NewMessageAppendEntries(
-			localServerID, peerServer1ID, go_raft.Term(3), 0, go_raft.LogIndex(2), go_raft.Term(1), []go_raft.LogEntry{}))
-
-	assert.Equal(t, go_raft.LogIndex(2), storage.LatestLogEntry().Index)
-}
-
 func TestMsgAppendEntries__AppendsNewEntriesToLog(t *testing.T) {
 	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
@@ -154,7 +131,54 @@ func TestMsgAppendEntries__AppendsNewEntriesToLog(t *testing.T) {
 	assert.Equal(t, go_raft.LogIndex(4), storage.LatestLogEntry().Index)
 }
 
-// TODO figure out what happens if we have out-of-order heartbeats, and we process and old heartbeat which would then
-// prune entries?
+func TestMsgAppendEntries__AppendingPreviouslyAppendedEntriesRetainsCurrentState(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
 
-// TODO log statements during tests are annoying
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
+		peerServer1ID, localServerID, go_raft.Term(2), true, go_raft.LogIndex(4)))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
+
+	storage.SetCurrentTerm(2)
+	storage.AppendLog("")  // term 2, index 3
+	storage.AppendLog("")  // term 2, index 4
+
+	actor.Process(
+		go_raft.NewMessageAppendEntries(
+			localServerID, peerServer1ID, go_raft.Term(2), 0, go_raft.LogIndex(2), go_raft.Term(1),
+			[]go_raft.LogEntry{
+				go_raft.NewLogEntry(1, 1, ""),
+				go_raft.NewLogEntry(1, 2, ""),
+				go_raft.NewLogEntry(2, 3, ""),
+			}))
+
+	assert.Equal(t, go_raft.LogIndex(4), storage.LatestLogEntry().Index)
+}
+
+func TestMsgAppendEntries__AppendingEntriesWithConflictingTermsPrunesOldEntries(t *testing.T) {
+	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	defer cleanup()
+
+	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntriesResponse(
+		peerServer1ID, localServerID, go_raft.Term(2), true, go_raft.LogIndex(2)))
+
+	storage.SetCurrentTerm(1)
+	storage.AppendLog("")  // term 1, index 1
+	storage.AppendLog("")  // term 1, index 2
+
+	storage.SetCurrentTerm(2)
+	storage.AppendLog("")  // term 2, index 3
+	storage.AppendLog("")  // term 2, index 4
+
+	actor.Process(
+		go_raft.NewMessageAppendEntries(
+			localServerID, peerServer1ID, go_raft.Term(2), 0, go_raft.LogIndex(1), go_raft.Term(1),
+			[]go_raft.LogEntry{
+				go_raft.NewLogEntry(2, 2, ""),
+			}))
+
+	assert.Equal(t, go_raft.LogIndex(2), storage.LatestLogEntry().Index)
+}

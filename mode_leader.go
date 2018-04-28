@@ -34,7 +34,6 @@ func (s *leaderMode) Name() (name string) {
 
 func (s *leaderMode) Enter() {
 	s.numTicksSinceLastHeartbeat = 0
-	s.broadcastHeartbeat()
 
 	s.nextIndex = map[ServerID]LogIndex{}
 	s.matchIndex = map[ServerID]LogIndex{}
@@ -43,6 +42,8 @@ func (s *leaderMode) Enter() {
 		s.nextIndex[serverID] = LogIndex(s.persistentStorage.LogLength() + 1)
 		s.matchIndex[serverID] = 0
 	}
+
+	s.broadcastHeartbeat()
 }
 
 func (s *leaderMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {

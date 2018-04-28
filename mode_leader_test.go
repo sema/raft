@@ -4,7 +4,6 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/sema/go-raft"
-	"github.com/sema/go-raft/mocks"
 	"github.com/golang/mock/gomock"
 )
 
