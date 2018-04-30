@@ -92,3 +92,16 @@ func NewMessageProposal(to ServerID, from ServerID, payload string) Message {
 		ProposalPayload: payload,
 	}
 }
+
+// HasTerm returns true if the message is associated with a term, and thus is only valid within
+// that term.
+func (m *Message) HasTerm() bool {
+	switch m.Kind {
+	case msgTick:
+		return false
+	case msgProposal:
+		return false
+	default:
+		return true
+	}
+}

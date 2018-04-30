@@ -48,6 +48,4 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// TODO Wait until one of the serverIDs is elected as leader, and exit
-	// TODO change all logic to not be timing but tick based, such that we can provide a non-time
-	// based bound on the test time
 }
