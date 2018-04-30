@@ -4,7 +4,10 @@ import (
 	"log"
 )
 
-// TODO rename this back to storage and change volatile to something else?
+// TODO go through storage and cleanup API
+// TODO test for proper handling of edge cases in storage
+
+const NO_VOTE ServerID = ""
 
 // memoryStorage implements the PersistentStorage interface using a memory back persistentStorage. Should only be used for testing!
 type memoryStorage struct {
@@ -34,14 +37,13 @@ func (ms *memoryStorage) VotedFor() ServerID {
 }
 
 func (ms *memoryStorage) SetVotedForIfUnset(votedFor ServerID) {
-	// TODO constant? ok response?
-	if ms.votedFor == "" {
+	if ms.votedFor == NO_VOTE {
 		ms.votedFor = votedFor
 	}
 }
 
 func (ms *memoryStorage) ClearVotedFor() {
-	ms.votedFor = ""
+	ms.votedFor = NO_VOTE
 }
 
 func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {
