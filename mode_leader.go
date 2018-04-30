@@ -11,21 +11,22 @@ type leaderMode struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         ServerDiscovery
+	config            Config
 
-	numTicksSinceLastHeartbeat int
+	numTicksSinceLastHeartbeat Tick
 
 	nextIndex  map[ServerID]LogIndex
 	matchIndex map[ServerID]LogIndex
 	hasMatched map[ServerID]bool
 }
 
-func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
+func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
 	return &leaderMode{
-		persistentStorage:          persistentStorage,
-		volatileStorage:            volatileStorage,
-		gateway:                    gateway,
-		discovery:                  discovery,
-		numTicksSinceLastHeartbeat: 0,
+		persistentStorage: persistentStorage,
+		volatileStorage:   volatileStorage,
+		gateway:           gateway,
+		discovery:         discovery,
+		config:            config,
 	}
 }
 
@@ -73,7 +74,7 @@ func (s *leaderMode) Process(message Message) *MessageResult {
 func (s *leaderMode) handleTick(message Message) *MessageResult {
 	s.numTicksSinceLastHeartbeat += 1
 
-	if s.numTicksSinceLastHeartbeat > 4 {
+	if s.numTicksSinceLastHeartbeat >= s.config.LeaderHeartbeatFrequency {
 		s.numTicksSinceLastHeartbeat = 0
 		s.broadcastHeartbeat()
 	}

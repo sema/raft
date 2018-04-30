@@ -1,8 +1,8 @@
 package go_raft
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestGetTicksWithSplay__ZeroSplayReturnsBase(t *testing.T) {

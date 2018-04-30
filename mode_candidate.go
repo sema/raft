@@ -9,9 +9,9 @@ type candidateMode struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         ServerDiscovery
-	config Config
+	config            Config
 
-	ticksSinceLastHeartbeat Tick
+	ticksSinceLastHeartbeat  Tick
 	ticksUntilLeaderElection Tick
 
 	votes map[ServerID]bool
@@ -19,11 +19,11 @@ type candidateMode struct {
 
 func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
 	return &candidateMode{
-		persistentStorage:       persistentStorage,
-		volatileStorage:         volatileStorage,
-		gateway:                 gateway,
-		discovery:               discovery,
-		config: config,
+		persistentStorage: persistentStorage,
+		volatileStorage:   volatileStorage,
+		gateway:           gateway,
+		discovery:         discovery,
+		config:            config,
 	}
 }
 

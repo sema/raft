@@ -5,7 +5,6 @@ import (
 	"github.com/sema/go-raft"
 	"github.com/sema/go-raft/mocks"
 	"testing"
-	"time"
 )
 
 const localServerID = go_raft.ServerID("server1.servers.local")
@@ -25,9 +24,9 @@ func newActorTestSetup(t *testing.T) (
 		[]go_raft.ServerID{localServerID, peerServer1ID, peerServer2ID})
 
 	config := go_raft.Config{
-		TickFrequency:              100 * time.Millisecond,
 		LeaderElectionTimeout:      10,
 		LeaderElectionTimeoutSplay: 0,
+		LeaderHeartbeatFrequency:   5,
 	}
 
 	actor := go_raft.NewActor(localServerID, storage, gatewayMock, discovery, config)

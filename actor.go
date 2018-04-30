@@ -28,7 +28,7 @@ func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGatewa
 	subInterpreters := map[ActorMode]actorModeStrategy{
 		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, discovery, config),
 		CandidateMode: newCandidateMode(storage, vstorage, gateway, discovery, config),
-		LeaderMode:    newLeaderMode(storage, vstorage, gateway, discovery),
+		LeaderMode:    newLeaderMode(storage, vstorage, gateway, discovery, config),
 	}
 
 	actor := &actorImpl{
