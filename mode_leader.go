@@ -92,8 +92,12 @@ func (s *leaderMode) handleProposal(message Message) *MessageResult {
 // Described in (3.5)
 func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult {
 	if !message.Success {
-		// TODO we don't necessarily want out-of-order AppendEntries rejection responses triggering a decrement of
-		// nextIndex. Out-of-order messages will not break any guarantees, but may trigger inefficiencies.
+		if s.hasMatched[message.From] {
+			// This is an out-of-order AppendEntries responses that we can safely discard. We have already recorded
+			// a positive AppendEntries response and adjusted matchIndex/nextIndex accordingly. The current rejection
+			// response must be a retry from before the acceptance response.
+			return newMessageResult()
+		}
 
 		s.nextIndex[message.From] = MaxLogIndex(s.nextIndex[message.From]-1, 1)
 		s.heartbeat(message.From)
