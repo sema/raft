@@ -101,11 +101,4 @@ const (
 	ExistingMode // special mode to signal a no-op change to modes
 )
 
-/*
-type Message interface {
-	PreExecuteModeChange(mode ActorMode) (ActorMode, Term, bool)
-	Process(mode ActorMode) *MessageResult
-
-	Term() Term
-}
-*/
+type Tick int

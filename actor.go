@@ -18,7 +18,7 @@ type actorImpl struct {
 	persistentStorage PersistentStorage
 }
 
-func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery) Actor {
+func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Actor {
 
 	// TODO determine if we need this
 	vstorage := &VolatileStorage{
@@ -26,15 +26,18 @@ func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGatewa
 	}
 
 	subInterpreters := map[ActorMode]actorModeStrategy{
-		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, discovery),
-		CandidateMode: newCandidateMode(storage, vstorage, gateway, discovery),
+		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, discovery, config),
+		CandidateMode: newCandidateMode(storage, vstorage, gateway, discovery, config),
 		LeaderMode:    newLeaderMode(storage, vstorage, gateway, discovery),
 	}
 
-	return &actorImpl{
+	actor := &actorImpl{
 		persistentStorage: storage,
 		modeStrategy:      subInterpreters,
 	}
+	actor.currentModeStrategy().Enter()
+
+	return actor
 }
 
 func (i *actorImpl) Mode() ActorMode {

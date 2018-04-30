@@ -87,8 +87,8 @@ func NewMessageTick(to ServerID, from ServerID) Message {
 
 func NewMessageProposal(to ServerID, from ServerID, payload string) Message {
 	return Message{
-		Kind: msgProposal,
-		From: from,
+		Kind:            msgProposal,
+		From:            from,
 		ProposalPayload: payload,
 	}
 }

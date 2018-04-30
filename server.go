@@ -18,7 +18,7 @@ type server struct {
 }
 
 func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Server {
-	interpreter := NewActor(serverID, storage, gateway, discovery)
+	interpreter := NewActor(serverID, storage, gateway, discovery, config)
 
 	return &server{
 		interpreter: interpreter,

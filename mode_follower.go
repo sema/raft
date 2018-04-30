@@ -3,20 +3,23 @@ package go_raft
 import "log"
 
 type followerMode struct {
-	persistentStorage       PersistentStorage
-	volatileStorage         *VolatileStorage
-	gateway                 ServerGateway
-	discovery               ServerDiscovery
-	ticksSinceLastHeartbeat int
+	persistentStorage PersistentStorage
+	volatileStorage   *VolatileStorage
+	gateway           ServerGateway
+	discovery         ServerDiscovery
+	config            Config
+
+	ticksSinceLastHeartbeat  Tick
+	ticksUntilLeaderElection Tick
 }
 
-func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
+func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
 	return &followerMode{
-		persistentStorage:       persistentStorage,
-		volatileStorage:         volatileStorage,
-		gateway:                 gateway,
-		discovery:               discovery,
-		ticksSinceLastHeartbeat: 0,
+		persistentStorage: persistentStorage,
+		volatileStorage:   volatileStorage,
+		gateway:           gateway,
+		discovery:         discovery,
+		config:            config,
 	}
 }
 
@@ -26,6 +29,7 @@ func (s *followerMode) Name() (name string) {
 
 func (s *followerMode) Enter() {
 	s.ticksSinceLastHeartbeat = 0
+	s.ticksUntilLeaderElection = getTicksWithSplay(s.config.LeaderElectionTimeout, s.config.LeaderElectionTimeoutSplay)
 }
 
 func (s *followerMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {
@@ -50,9 +54,7 @@ func (s *followerMode) Process(message Message) *MessageResult {
 func (s *followerMode) handleTick(message Message) *MessageResult {
 	s.ticksSinceLastHeartbeat += 1
 
-	// TODO change this into config
-	// TODO add randomization
-	if s.ticksSinceLastHeartbeat > 10 {
+	if s.ticksSinceLastHeartbeat >= s.ticksUntilLeaderElection {
 		return s.startLeaderElection()
 	}
 

@@ -112,9 +112,9 @@ func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
 }
 
 func (ms *memoryStorage) LogRange(startIndex LogIndex) []LogEntry {
-	startIndex = startIndex - 1  // zero index
+	startIndex = startIndex - 1 // zero index
 
-	if int(startIndex) >= len(ms.logEntries)   {
+	if int(startIndex) >= len(ms.logEntries) {
 		return nil
 	}
 	return ms.logEntries[startIndex:]

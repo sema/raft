@@ -9,19 +9,21 @@ type candidateMode struct {
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	discovery         ServerDiscovery
+	config Config
 
-	ticksSinceLastHeartbeat int
+	ticksSinceLastHeartbeat Tick
+	ticksUntilLeaderElection Tick
 
 	votes map[ServerID]bool
 }
 
-func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
+func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
 	return &candidateMode{
 		persistentStorage:       persistentStorage,
 		volatileStorage:         volatileStorage,
 		gateway:                 gateway,
 		discovery:               discovery,
-		ticksSinceLastHeartbeat: 0,
+		config: config,
 	}
 }
 
@@ -55,7 +57,7 @@ func (s *candidateMode) Name() (name string) {
 func (s *candidateMode) handleTick(message Message) *MessageResult {
 	s.ticksSinceLastHeartbeat += 1
 
-	if s.ticksSinceLastHeartbeat > 10 { // TODO move this into config
+	if s.ticksSinceLastHeartbeat >= s.ticksUntilLeaderElection {
 		return s.startLeaderElection()
 	}
 
@@ -102,6 +104,7 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 
 func (s *candidateMode) Enter() {
 	s.ticksSinceLastHeartbeat = 0
+	s.ticksUntilLeaderElection = getTicksWithSplay(s.config.LeaderElectionTimeout, s.config.LeaderElectionTimeoutSplay)
 
 	s.votes = make(map[ServerID]bool)
 
