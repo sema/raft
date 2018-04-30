@@ -3,37 +3,50 @@ package go_raft
 type messageKind string
 
 const (
+	// Replicate log entries from leader to followers + leader heartbeats
 	msgAppendEntries         = "msgAppendEntries"
 	msgAppendEntriesResponse = "msgAppendEntriesResponse"
-	msgVoteFor               = "msgVoteFor"
-	msgVoteForResponse       = "msgVoteForResponse"
-	msgTick                  = "msgTick"
-	msgProposal              = "msgProposal"
+
+	// Leader election voting
+	msgVoteFor         = "msgVoteFor"
+	msgVoteForResponse = "msgVoteForResponse"
+
+	// Progression of time is measured in ticks
+	msgTick = "msgTick"
+
+	// Proposal for a leader to append a new entry to the log - may or may not succeed
+	msgProposal = "msgProposal"
 )
 
-// TODO cleanup fields
 type Message struct {
+	// Kind of message
 	Kind messageKind
 
+	// Sender/receiver actor
+	From ServerID
+	To   ServerID
+
+	// Term the message belongs to (only applies to some messages)
 	Term Term
 
+	// VoteFor messages only
 	LastLogTerm  Term
 	LastLogIndex LogIndex
 
-	PreviousLogTerm  Term
-	PreviousLogIndex LogIndex
-
-	LeaderCommit LogIndex
-
+	// VoteForResponse only
 	VoteGranted bool
 
-	From ServerID
+	// AppendEntries messages only
+	PreviousLogTerm  Term
+	PreviousLogIndex LogIndex
+	LeaderCommit     LogIndex
+	LogEntries       []LogEntry
 
+	// AppendEntriesResponse messages only
 	Success    bool
 	MatchIndex LogIndex
 
-	LogEntries []LogEntry
-
+	// Proposal messages only
 	ProposalPayload string
 }
 
@@ -41,6 +54,7 @@ func NewMessageVoteFor(to ServerID, from ServerID, term Term, lastLogIndex LogIn
 	return Message{
 		Kind:         msgVoteFor,
 		From:         from,
+		To:           to,
 		Term:         term,
 		LastLogIndex: lastLogIndex,
 		LastLogTerm:  lastLogTerm,
@@ -50,17 +64,19 @@ func NewMessageVoteFor(to ServerID, from ServerID, term Term, lastLogIndex LogIn
 func NewMessageVoteForResponse(to ServerID, from ServerID, term Term, voteGranted bool) Message {
 	return Message{
 		Kind:        msgVoteForResponse,
+		From:        from,
+		To:          to,
 		Term:        term,
 		VoteGranted: voteGranted,
-		From:        from,
 	}
 }
 
 func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit LogIndex, previousLogIndex LogIndex, previousLogTerm Term, logEntries []LogEntry) Message {
 	return Message{
 		Kind:             msgAppendEntries,
-		Term:             term,
 		From:             from,
+		To:               to,
+		Term:             term,
 		LeaderCommit:     leaderCommit,
 		PreviousLogIndex: previousLogIndex,
 		PreviousLogTerm:  previousLogTerm,
@@ -71,8 +87,9 @@ func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit
 func NewMessageAppendEntriesResponse(to ServerID, from ServerID, term Term, success bool, matchIndex LogIndex) Message {
 	return Message{
 		Kind:       msgAppendEntriesResponse,
-		Term:       term,
 		From:       from,
+		To:         to,
+		Term:       term,
 		Success:    success,
 		MatchIndex: matchIndex,
 	}
@@ -82,6 +99,7 @@ func NewMessageTick(to ServerID, from ServerID) Message {
 	return Message{
 		Kind: msgTick,
 		From: from,
+		To:   to,
 	}
 }
 
@@ -89,6 +107,7 @@ func NewMessageProposal(to ServerID, from ServerID, payload string) Message {
 	return Message{
 		Kind:            msgProposal,
 		From:            from,
+		To:              to,
 		ProposalPayload: payload,
 	}
 }

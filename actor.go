@@ -20,7 +20,6 @@ type actorImpl struct {
 
 func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Actor {
 
-	// TODO determine if we need this
 	vstorage := &VolatileStorage{
 		ServerID: serverID,
 	}

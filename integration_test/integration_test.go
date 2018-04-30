@@ -47,5 +47,5 @@ func TestIntegration(t *testing.T) {
 		}
 	}
 
-	// TODO Wait until one of the serverIDs is elected as leader, and exit
+	// TODO Write integration tests
 }

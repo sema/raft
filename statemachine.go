@@ -1,3 +1,5 @@
 package go_raft
 
-// TODO notify that commitIndex increased to allow state machine to take action
+// TODO implement example state machine
+// - notify that commitIndex increased to allow state machine to take action
+// - keep track of appended values to state machine (persistence, guarantees)
