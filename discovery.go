@@ -22,5 +22,5 @@ func (d *staticDiscovery) Servers() []ServerID {
 }
 
 func (d *staticDiscovery) Quorum() int {
-	return int(math.Floor(float64(len(d.servers)) / float64(2))) + 1
+	return int(math.Floor(float64(len(d.servers))/float64(2))) + 1
 }

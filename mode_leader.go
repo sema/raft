@@ -2,8 +2,8 @@ package go_raft
 
 import (
 	"fmt"
-	"sort"
 	"log"
+	"sort"
 )
 
 type leaderMode struct {
@@ -16,6 +16,7 @@ type leaderMode struct {
 
 	nextIndex  map[ServerID]LogIndex
 	matchIndex map[ServerID]LogIndex
+	hasMatched map[ServerID]bool
 }
 
 func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery) actorModeStrategy {
@@ -37,10 +38,12 @@ func (s *leaderMode) Enter() {
 
 	s.nextIndex = map[ServerID]LogIndex{}
 	s.matchIndex = map[ServerID]LogIndex{}
+	s.hasMatched = map[ServerID]bool{}
 
 	for _, serverID := range s.discovery.Servers() {
 		s.nextIndex[serverID] = LogIndex(s.persistentStorage.LogLength() + 1)
 		s.matchIndex[serverID] = 0
+		s.hasMatched[serverID] = false
 	}
 
 	s.matchIndex[s.volatileStorage.ServerID] = s.persistentStorage.LatestLogEntry().Index
@@ -58,6 +61,8 @@ func (s *leaderMode) Process(message Message) *MessageResult {
 		return s.handleTick(message)
 	case msgAppendEntriesResponse:
 		return s.handleAppendEntriesResponse(message)
+	case msgProposal:
+		return s.handleProposal(message)
 	}
 
 	// Ignore message - allows us to add new messages in the future in a backwards compatible manner
@@ -76,6 +81,13 @@ func (s *leaderMode) handleTick(message Message) *MessageResult {
 	return newMessageResult()
 }
 
+func (s *leaderMode) handleProposal(message Message) *MessageResult {
+	s.persistentStorage.AppendLog(message.ProposalPayload)
+	s.matchIndex[s.volatileStorage.ServerID] += 1
+
+	return newMessageResult()
+}
+
 // Described in (3.5)
 func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult {
 	if !message.Success {
@@ -86,6 +98,8 @@ func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult
 		s.heartbeat(message.From)
 		return newMessageResult()
 	}
+
+	s.hasMatched[message.From] = true
 
 	if s.matchIndex[message.From] < message.MatchIndex {
 		log.Printf("Setting matchIndex for %s to %d", message.From, message.MatchIndex)
@@ -119,6 +133,12 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		panic(fmt.Sprintf("Trying to lookup nonexisting log entry (index: %d) during heartbeat", currentIndex))
 	}
 
+	var logEntries []LogEntry
+	if s.hasMatched[targetServer] {
+		// TODO limit the number of entries sent at any given time
+		logEntries = s.persistentStorage.LogRange(logEntry.Index + 1)
+	}
+
 	s.gateway.Send(targetServer, NewMessageAppendEntries(
 		targetServer,
 		s.volatileStorage.ServerID,
@@ -129,12 +149,9 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		logEntry.Index,
 		logEntry.Term,
 
-		[]LogEntry{},  // TODO add content
+		logEntries,
 	))
 }
-
-// TODO API for adding new entries (essentially triggers new heartbeat)
-// - NA
 
 func (s *leaderMode) advanceCommitIndex() {
 	var matchIndexes []int
@@ -146,7 +163,7 @@ func (s *leaderMode) advanceCommitIndex() {
 	sort.Ints(matchIndexes)
 
 	quorum := s.discovery.Quorum()
-	quorumIndex := LogIndex(matchIndexes[quorum - 1])
+	quorumIndex := LogIndex(matchIndexes[quorum-1])
 
 	if s.volatileStorage.CommitIndex < quorumIndex {
 		log.Printf("Increasing commitIndex to %d (%v)", quorumIndex, s.matchIndex)

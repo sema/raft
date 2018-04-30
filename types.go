@@ -21,8 +21,8 @@ func MinLogIndex(v1 LogIndex, v2 LogIndex) LogIndex {
 }
 
 type LogEntry struct {
-	Term  Term
-	Index LogIndex
+	Term    Term
+	Index   LogIndex
 	Payload string
 }
 
@@ -78,6 +78,7 @@ type PersistentStorage interface {
 	AppendLog(payload string)
 	LogLength() int
 	MergeLogs([]LogEntry)
+	LogRange(startIndex LogIndex) []LogEntry
 }
 
 type actorModeStrategy interface {

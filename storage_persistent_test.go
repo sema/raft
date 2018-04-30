@@ -1,18 +1,18 @@
 package go_raft_test
 
 import (
-	"testing"
 	"github.com/sema/go-raft"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestMemoryStorage_MergeLogs_RemovesEntriesAfterInputIfTermsDiffer(t *testing.T) {
 	storage := go_raft.NewMemoryStorage()
 
 	storage.SetCurrentTerm(0)
-	storage.AppendLog("")  // index 1, term 0
-	storage.AppendLog("")  // index 2, term 0
-	storage.AppendLog("")  // index 3, term 0
+	storage.AppendLog("") // index 1, term 0
+	storage.AppendLog("") // index 2, term 0
+	storage.AppendLog("") // index 3, term 0
 
 	storage.MergeLogs([]go_raft.LogEntry{
 		go_raft.NewLogEntry(1, 2, ""),

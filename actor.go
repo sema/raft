@@ -82,6 +82,8 @@ func (i *actorImpl) messageFromNewTerm(message Message) bool {
 func (i *actorImpl) messageHasExpired(message Message) bool {
 	if message.Kind == msgTick { // TODO generalize
 		return false // ticks are exempt
+	} else if message.Kind == msgProposal {
+		return false // and proposals
 	}
 
 	return message.Term < i.persistentStorage.CurrentTerm()

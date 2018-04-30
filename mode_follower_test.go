@@ -3,8 +3,8 @@ package go_raft_test
 import (
 	"github.com/golang/mock/gomock"
 	"github.com/sema/go-raft"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestMsgVoteFor__IsAbleToGetAVote(t *testing.T) {
@@ -55,8 +55,8 @@ func TestMsgVoteFor__IsRejectedIfIfCandidateLogBelongsToOlderTerm(t *testing.T) 
 		peerServer1ID, localServerID, go_raft.Term(1), false))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 0, 0))
@@ -70,8 +70,8 @@ func TestMsgVoteFor__IsRejectedIfIfCandidateLogIsBehindOnIndex(t *testing.T) {
 		peerServer1ID, localServerID, go_raft.Term(1), false))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageVoteFor(localServerID, peerServer1ID, go_raft.Term(1), 1, 1))
@@ -85,8 +85,8 @@ func TestMsgAppendEntries__IsRejectedIfPreviousTermAndIndexDoesNotMatch(t *testi
 		peerServer1ID, localServerID, go_raft.Term(1), false, go_raft.LogIndex(0)))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageAppendEntries(
@@ -101,8 +101,8 @@ func TestMsgAppendEntries__IsAcceptedIfPreviousTermAndIndexMatch(t *testing.T) {
 		peerServer1ID, localServerID, go_raft.Term(1), true, go_raft.LogIndex(2)))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageAppendEntries(
@@ -117,8 +117,8 @@ func TestMsgAppendEntries__AppendsNewEntriesToLog(t *testing.T) {
 		peerServer1ID, localServerID, go_raft.Term(1), true, go_raft.LogIndex(4)))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	actor.Process(
 		go_raft.NewMessageAppendEntries(
@@ -139,12 +139,12 @@ func TestMsgAppendEntries__AppendingPreviouslyAppendedEntriesRetainsCurrentState
 		peerServer1ID, localServerID, go_raft.Term(2), true, go_raft.LogIndex(4)))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	storage.SetCurrentTerm(2)
-	storage.AppendLog("")  // term 2, index 3
-	storage.AppendLog("")  // term 2, index 4
+	storage.AppendLog("") // term 2, index 3
+	storage.AppendLog("") // term 2, index 4
 
 	actor.Process(
 		go_raft.NewMessageAppendEntries(
@@ -166,12 +166,12 @@ func TestMsgAppendEntries__AppendingEntriesWithConflictingTermsPrunesOldEntries(
 		peerServer1ID, localServerID, go_raft.Term(2), true, go_raft.LogIndex(2)))
 
 	storage.SetCurrentTerm(1)
-	storage.AppendLog("")  // term 1, index 1
-	storage.AppendLog("")  // term 1, index 2
+	storage.AppendLog("") // term 1, index 1
+	storage.AppendLog("") // term 1, index 2
 
 	storage.SetCurrentTerm(2)
-	storage.AppendLog("")  // term 2, index 3
-	storage.AppendLog("")  // term 2, index 4
+	storage.AppendLog("") // term 2, index 3
+	storage.AppendLog("") // term 2, index 4
 
 	actor.Process(
 		go_raft.NewMessageAppendEntries(

@@ -8,6 +8,7 @@ const (
 	msgVoteFor               = "msgVoteFor"
 	msgVoteForResponse       = "msgVoteForResponse"
 	msgTick                  = "msgTick"
+	msgProposal              = "msgProposal"
 )
 
 // TODO cleanup fields
@@ -32,6 +33,8 @@ type Message struct {
 	MatchIndex LogIndex
 
 	LogEntries []LogEntry
+
+	ProposalPayload string
 }
 
 func NewMessageVoteFor(to ServerID, from ServerID, term Term, lastLogIndex LogIndex, lastLogTerm Term) Message {
@@ -61,7 +64,7 @@ func NewMessageAppendEntries(to ServerID, from ServerID, term Term, leaderCommit
 		LeaderCommit:     leaderCommit,
 		PreviousLogIndex: previousLogIndex,
 		PreviousLogTerm:  previousLogTerm,
-		LogEntries: logEntries,
+		LogEntries:       logEntries,
 	}
 }
 
@@ -79,5 +82,13 @@ func NewMessageTick(to ServerID, from ServerID) Message {
 	return Message{
 		Kind: msgTick,
 		From: from,
+	}
+}
+
+func NewMessageProposal(to ServerID, from ServerID, payload string) Message {
+	return Message{
+		Kind: msgProposal,
+		From: from,
+		ProposalPayload: payload,
 	}
 }

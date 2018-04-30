@@ -1,10 +1,10 @@
 package go_raft_test
 
 import (
-	"github.com/sema/go-raft"
-	"testing"
-	"github.com/sema/go-raft/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/sema/go-raft"
+	"github.com/sema/go-raft/mocks"
+	"testing"
 )
 
 const localServerID = go_raft.ServerID("server1.servers.local")
@@ -53,10 +53,20 @@ func testTransitionFromFollowerToLeader(actor go_raft.Actor, gatewayMock *mock_g
 	prevTerm := storage.LatestLogEntry().Term
 
 	gatewayMock.EXPECT().Send(peerServer1ID, go_raft.NewMessageAppendEntries(
-		peerServer1ID, localServerID, go_raft.Term(1), 0, prevIndex, prevTerm, []go_raft.LogEntry{}))
+		peerServer1ID, localServerID, go_raft.Term(1), 0, prevIndex, prevTerm, nil))
 	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageAppendEntries(
-		peerServer2ID, localServerID, go_raft.Term(1), 0, prevIndex, prevTerm, []go_raft.LogEntry{}))
+		peerServer2ID, localServerID, go_raft.Term(1), 0, prevIndex, prevTerm, nil))
 
 	actor.Process(go_raft.NewMessageVoteForResponse(
 		localServerID, peerServer1ID, go_raft.Term(1), true))
+}
+
+func testFollowersReplicateUp(actor go_raft.Actor, storage go_raft.PersistentStorage) {
+	term := storage.CurrentTerm()
+	lastIndex := storage.LatestLogEntry().Index
+
+	actor.Process(go_raft.NewMessageAppendEntriesResponse(
+		localServerID, peerServer1ID, term, true, lastIndex))
+	actor.Process(go_raft.NewMessageAppendEntriesResponse(
+		localServerID, peerServer2ID, term, true, lastIndex))
 }

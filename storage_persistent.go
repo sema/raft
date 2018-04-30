@@ -61,8 +61,8 @@ func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {
 
 func (ms *memoryStorage) AppendLog(payload string) {
 	entry := LogEntry{
-		Term:  ms.currentTerm,
-		Index: LogIndex(len(ms.logEntries) + 1),
+		Term:    ms.currentTerm,
+		Index:   LogIndex(len(ms.logEntries) + 1),
 		Payload: payload,
 	}
 
@@ -95,7 +95,7 @@ func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
 	for _, entry := range entries {
 		if entry.Index < nextIndex {
 			// Merge existing entry
-			index := entry.Index-1
+			index := entry.Index - 1
 			if ms.logEntries[index].Term != entry.Term {
 				// Only merge if terms differ, otherwise Raft guarantees that this entry and all following entries match
 				ms.pruneLogEntriesAfter(entry.Index)
@@ -109,4 +109,13 @@ func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
 			log.Panicf("Trying to append log entries starting with index %d to logs ending with index %d", entry.Index, nextIndex-1)
 		}
 	}
+}
+
+func (ms *memoryStorage) LogRange(startIndex LogIndex) []LogEntry {
+	startIndex = startIndex - 1  // zero index
+
+	if int(startIndex) >= len(ms.logEntries)   {
+		return nil
+	}
+	return ms.logEntries[startIndex:]
 }

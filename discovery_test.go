@@ -1,9 +1,9 @@
 package go_raft_test
 
 import (
-	"testing"
 	"github.com/sema/go-raft"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestStaticDiscovery_Quorum(t *testing.T) {
