@@ -122,7 +122,6 @@ func (s *candidateMode) Enter() {
 
 		logEntry := s.persistentStorage.LatestLogEntry()
 
-		// TODO research how messages should be retried safely
 		s.gateway.Send(serverID, NewMessageVoteFor(serverID, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), logEntry.Index, logEntry.Term))
 	}
 }
