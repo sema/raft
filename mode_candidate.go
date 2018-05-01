@@ -55,7 +55,7 @@ func (s *candidateMode) Name() (name string) {
 }
 
 func (s *candidateMode) handleTick(message Message) *MessageResult {
-	s.ticksSinceLastHeartbeat += 1
+	s.ticksSinceLastHeartbeat++
 
 	if s.ticksSinceLastHeartbeat >= s.ticksUntilLeaderElection {
 		return s.startLeaderElection()
@@ -85,9 +85,9 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 	votesNegative := 0
 	for serverID := range s.votes {
 		if s.votes[serverID] {
-			votesPositive += 1
+			votesPositive++
 		} else {
-			votesNegative += 1
+			votesNegative++
 		}
 	}
 

@@ -52,7 +52,7 @@ func (s *followerMode) Process(message Message) *MessageResult {
 }
 
 func (s *followerMode) handleTick(message Message) *MessageResult {
-	s.ticksSinceLastHeartbeat += 1
+	s.ticksSinceLastHeartbeat++
 
 	if s.ticksSinceLastHeartbeat >= s.ticksUntilLeaderElection {
 		return s.startLeaderElection()

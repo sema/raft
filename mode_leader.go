@@ -72,7 +72,7 @@ func (s *leaderMode) Process(message Message) *MessageResult {
 }
 
 func (s *leaderMode) handleTick(message Message) *MessageResult {
-	s.numTicksSinceLastHeartbeat += 1
+	s.numTicksSinceLastHeartbeat++
 
 	if s.numTicksSinceLastHeartbeat >= s.config.LeaderHeartbeatFrequency {
 		s.numTicksSinceLastHeartbeat = 0
@@ -84,7 +84,7 @@ func (s *leaderMode) handleTick(message Message) *MessageResult {
 
 func (s *leaderMode) handleProposal(message Message) *MessageResult {
 	s.persistentStorage.AppendLog(message.ProposalPayload)
-	s.matchIndex[s.volatileStorage.ServerID] += 1
+	s.matchIndex[s.volatileStorage.ServerID]++
 
 	return newMessageResult()
 }

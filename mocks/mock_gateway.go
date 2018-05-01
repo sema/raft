@@ -6,7 +6,7 @@ package mock_raft
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	go_raft "github.com/sema/raft"
+	raft "github.com/sema/raft"
 	reflect "reflect"
 )
 
@@ -34,7 +34,7 @@ func (m *MockServerGateway) EXPECT() *MockServerGatewayMockRecorder {
 }
 
 // Send mocks base method
-func (m *MockServerGateway) Send(to go_raft.ServerID, message go_raft.Message) {
+func (m *MockServerGateway) Send(to raft.ServerID, message raft.Message) {
 	m.ctrl.Call(m, "Send", to, message)
 }
 

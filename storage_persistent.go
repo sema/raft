@@ -106,7 +106,7 @@ func (ms *memoryStorage) MergeLogs(entries []LogEntry) {
 		} else if entry.Index == nextIndex {
 			// Append
 			ms.logEntries = append(ms.logEntries, entry)
-			nextIndex += 1
+			nextIndex++
 		} else {
 			log.Panicf("Trying to append log entries starting with index %d to logs ending with index %d", entry.Index, nextIndex-1)
 		}
