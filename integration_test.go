@@ -1,8 +1,8 @@
 package raft_test
 
 import (
-	"testing"
 	"github.com/sema/raft"
+	"testing"
 )
 
 const server1ID = raft.ServerID("server1.raft.local")

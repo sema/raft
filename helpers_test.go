@@ -22,7 +22,7 @@ func newActorTestSetup(t *testing.T) (
 	storage := raft.NewMemoryStorage()
 
 	config := raft.Config{
-		Servers: []raft.ServerID{localServerID, peerServer1ID, peerServer2ID},
+		Servers:                    []raft.ServerID{localServerID, peerServer1ID, peerServer2ID},
 		LeaderElectionTimeout:      10,
 		LeaderElectionTimeoutSplay: 0,
 		LeaderHeartbeatFrequency:   5,
