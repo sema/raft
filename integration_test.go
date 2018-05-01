@@ -2,8 +2,8 @@ package raft_test
 
 import (
 	"github.com/sema/raft"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 const server1ID = raft.ServerID("server1.raft.local")
@@ -72,7 +72,7 @@ func testSetup3Servers(t *testing.T) (map[raft.ServerID]raft.Server, *localGatew
 	}
 
 	for _, server := range servers {
-		go server.Run()
+		go server.Start()
 	}
 
 	return servers, gateway
@@ -117,16 +117,16 @@ func testWaitForLogEntryToReplicate(t *testing.T, servers map[raft.ServerID]raft
 }
 
 type localGateway struct {
-	servers map[raft.ServerID]raft.Server
+	servers       map[raft.ServerID]raft.Server
 	downedServers map[raft.ServerID]bool
-	t *testing.T
+	t             *testing.T
 }
 
 func newLocalServerGateway(t *testing.T) *localGateway {
 	return &localGateway{
-		servers: map[raft.ServerID]raft.Server{},
+		servers:       map[raft.ServerID]raft.Server{},
 		downedServers: map[raft.ServerID]bool{},
-		t: t,
+		t:             t,
 	}
 }
 
@@ -140,11 +140,11 @@ func (g *localGateway) ChangeServerConnectivity(serverID raft.ServerID, connecte
 
 func (g *localGateway) Send(to raft.ServerID, message raft.Message) {
 	if g.downedServers[to] {
-		return  // drop all traffic to downed server
+		return // drop all traffic to downed server
 	}
 
 	if g.downedServers[message.From] {
-		return  // drop all traffic from downed server
+		return // drop all traffic from downed server
 	}
 
 	server := g.servers[to]

@@ -20,7 +20,7 @@ type actorImpl struct {
 	modeStrategies map[ActorMode]actorModeStrategy
 
 	persistentStorage Storage
-	volatileStorage *VolatileStorage
+	volatileStorage   *VolatileStorage
 
 	processedTicks Tick
 }
@@ -38,9 +38,9 @@ func NewActor(serverID ServerID, storage Storage, gateway ServerGateway, config 
 
 	actor := &actorImpl{
 		persistentStorage: storage,
-		volatileStorage: vstorage,
+		volatileStorage:   vstorage,
 		modeStrategies:    modeStrategies,
-		processedTicks: 0,
+		processedTicks:    0,
 	}
 	actor.currentModeStrategy().Enter()
 
