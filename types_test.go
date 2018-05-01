@@ -1,7 +1,7 @@
 package raft_test
 
 import (
-	"github.com/sema/go-raft"
+	"github.com/sema/raft"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

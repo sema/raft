@@ -1,7 +1,7 @@
 package integration_test
 
 import (
-	"github/sema/go-raft"
+	"github/sema/raft"
 	"log"
 	"os"
 	"testing"

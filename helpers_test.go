@@ -2,8 +2,8 @@ package raft_test
 
 import (
 	"github.com/golang/mock/gomock"
-	"github.com/sema/go-raft"
-	"github.com/sema/go-raft/mocks"
+	"github.com/sema/raft"
+	"github.com/sema/raft/mocks"
 	"testing"
 )
 

@@ -6,7 +6,7 @@ package mock_raft
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	go_raft "github.com/sema/go-raft"
+	go_raft "github.com/sema/raft"
 	reflect "reflect"
 )
 
