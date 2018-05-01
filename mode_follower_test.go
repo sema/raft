@@ -25,7 +25,7 @@ func TestMsgVoteFor__DoesNotOverwriteExistingVoteInTerm(t *testing.T) {
 	defer cleanup()
 
 	storage.SetCurrentTerm(raft.Term(1))
-	storage.SetVotedForIfUnset(peerServer1ID)
+	storage.SetVotedFor(peerServer1ID)
 
 	gatewayMock.EXPECT().Send(peerServer2ID, raft.NewMessageVoteForResponse(
 		peerServer2ID, localServerID, raft.Term(1), false))

@@ -1,10 +1,10 @@
 package raft_test
 
 import (
-	"testing"
-	"github.com/sema/raft/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/sema/raft"
+	"github.com/sema/raft/mocks"
+	"testing"
 )
 
 func TestServer_StopCausesStartToReturn(t *testing.T) {

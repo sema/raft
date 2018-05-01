@@ -106,7 +106,7 @@ func (i *actorImpl) changeMode(newMode ActorMode, newTerm Term) {
 
 	if newTerm != i.persistentStorage.CurrentTerm() {
 		i.persistentStorage.SetCurrentTerm(newTerm)
-		i.persistentStorage.ClearVotedFor()
+		i.persistentStorage.UnsetVotedFor()
 	}
 
 	i.currentModeStrategy().Exit()

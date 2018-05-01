@@ -108,7 +108,7 @@ func (s *candidateMode) Enter() {
 
 	// vote for ourselves
 	s.votes[s.volatileStorage.ServerID] = true
-	s.persistentStorage.SetVotedForIfUnset(s.volatileStorage.ServerID)
+	s.persistentStorage.SetVotedFor(s.volatileStorage.ServerID)
 
 	if s.persistentStorage.VotedFor() != s.volatileStorage.ServerID {
 		log.Panicf("Candidate could not vote for itself as it entered candidate mode, which it must do. Vote already cast for %s", s.persistentStorage.VotedFor())

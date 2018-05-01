@@ -40,7 +40,7 @@ func (s *leaderMode) Enter() {
 	s.hasMatched = map[ServerID]bool{}
 
 	for _, serverID := range s.config.Servers {
-		s.nextIndex[serverID] = LogIndex(s.persistentStorage.LogLength() + 1)
+		s.nextIndex[serverID] = LogIndex(s.persistentStorage.LatestLogEntry().Index + 1)
 		s.matchIndex[serverID] = 0
 		s.hasMatched[serverID] = false
 	}

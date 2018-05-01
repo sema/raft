@@ -118,7 +118,9 @@ func (s *followerMode) tryVoteForCandidate(lastLogTerm Term, lastLogIndex LogInd
 		return
 	}
 
-	s.persistentStorage.SetVotedForIfUnset(candidateID)
+	if s.persistentStorage.VotedFor() == NoVote {
+		s.persistentStorage.SetVotedFor(candidateID)
+	}
 }
 
 func (s *followerMode) isCandidateLogReplicationUpToDate(lastLogTerm Term, lastLogIndex LogIndex) bool {

@@ -1,8 +1,8 @@
 package raft
 
-type Term int
+type Term uint64
 type ServerID string
-type LogIndex int
+type LogIndex uint64
 
 func MaxLogIndex(v1 LogIndex, v2 LogIndex) LogIndex {
 	if v1 > v2 {
@@ -62,23 +62,6 @@ type RequestVoteRequest struct {
 type RequestVoteResponse struct {
 	Term        Term
 	VoteGranted bool
-}
-
-// Storage defines the interface for any persistent persistentStorage required by the Raft protocol.
-type Storage interface {
-	CurrentTerm() Term
-	SetCurrentTerm(newTerm Term)
-
-	VotedFor() ServerID
-	ClearVotedFor()
-	SetVotedForIfUnset(votedFor ServerID)
-
-	Log(index LogIndex) (logEntry LogEntry, ok bool)
-	LatestLogEntry() (logEntry LogEntry)
-	AppendLog(payload string)
-	LogLength() int
-	MergeLogs([]LogEntry)
-	LogRange(startIndex LogIndex) []LogEntry
 }
 
 type actorModeStrategy interface {
