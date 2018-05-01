@@ -64,8 +64,8 @@ type RequestVoteResponse struct {
 	VoteGranted bool
 }
 
-// PersistentStorage defines the interface for any persistent persistentStorage required by the Raft protocol.
-type PersistentStorage interface {
+// Storage defines the interface for any persistent persistentStorage required by the Raft protocol.
+type Storage interface {
 	CurrentTerm() Term
 	SetCurrentTerm(newTerm Term)
 

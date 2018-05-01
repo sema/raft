@@ -5,7 +5,7 @@ import (
 )
 
 type candidateMode struct {
-	persistentStorage PersistentStorage
+	persistentStorage Storage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	config            Config
@@ -16,7 +16,7 @@ type candidateMode struct {
 	votes map[ServerID]bool
 }
 
-func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
+func newCandidateMode(persistentStorage Storage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
 	return &candidateMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,

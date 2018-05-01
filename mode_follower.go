@@ -3,7 +3,7 @@ package raft
 import "log"
 
 type followerMode struct {
-	persistentStorage PersistentStorage
+	persistentStorage Storage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	config            Config
@@ -12,7 +12,7 @@ type followerMode struct {
 	ticksUntilLeaderElection Tick
 }
 
-func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
+func NewFollowerMode(persistentStorage Storage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
 	return &followerMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,

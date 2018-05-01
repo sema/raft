@@ -21,9 +21,9 @@ func TestIntegration__IsAbleToElectLeader(t *testing.T) {
 
 	for _, serverID := range config.Servers {
 		gateway := raft.NewLocalServerGateway(servers)
-		persistentStorage := raft.NewMemoryStorage()
+		storage := raft.NewMemoryStorage()
 
-		server := raft.NewServer(serverID, persistentStorage, gateway, config)
+		server := raft.NewServer(serverID, storage, gateway, config)
 
 		servers[serverID] = server
 	}

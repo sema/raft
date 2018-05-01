@@ -7,7 +7,7 @@ import (
 )
 
 type leaderMode struct {
-	persistentStorage PersistentStorage
+	persistentStorage Storage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
 	config            Config
@@ -19,7 +19,7 @@ type leaderMode struct {
 	hasMatched map[ServerID]bool
 }
 
-func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
+func newLeaderMode(persistentStorage Storage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
 	return &leaderMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,

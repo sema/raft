@@ -13,7 +13,7 @@ const peerServer2ID = raft.ServerID("server3.servers.local")
 
 // Base test setup for an actor, with in-memory storage, mocked gateway, and 2 peer actors.
 func newActorTestSetup(t *testing.T) (
-	raft.Actor, *mock_raft.MockServerGateway, raft.PersistentStorage, func()) {
+	raft.Actor, *mock_raft.MockServerGateway, raft.Storage, func()) {
 
 	mockCtrl := gomock.NewController(t)
 	cleanup := mockCtrl.Finish
@@ -33,7 +33,7 @@ func newActorTestSetup(t *testing.T) (
 	return actor, gatewayMock, storage, cleanup
 }
 
-func testTransitionFromFollowerToCandidate(actor raft.Actor, gatewayMock *mock_raft.MockServerGateway, storage raft.PersistentStorage) {
+func testTransitionFromFollowerToCandidate(actor raft.Actor, gatewayMock *mock_raft.MockServerGateway, storage raft.Storage) {
 	prevIndex := storage.LatestLogEntry().Index
 	prevTerm := storage.LatestLogEntry().Term
 
@@ -51,7 +51,7 @@ func testProgressTime(actor raft.Actor, numTicks int) {
 	}
 }
 
-func testTransitionFromFollowerToLeader(actor raft.Actor, gatewayMock *mock_raft.MockServerGateway, storage raft.PersistentStorage) {
+func testTransitionFromFollowerToLeader(actor raft.Actor, gatewayMock *mock_raft.MockServerGateway, storage raft.Storage) {
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
 	prevIndex := storage.LatestLogEntry().Index
@@ -66,7 +66,7 @@ func testTransitionFromFollowerToLeader(actor raft.Actor, gatewayMock *mock_raft
 		localServerID, peerServer1ID, raft.Term(1), true))
 }
 
-func testFollowersReplicateUp(actor raft.Actor, storage raft.PersistentStorage) {
+func testFollowersReplicateUp(actor raft.Actor, storage raft.Storage) {
 	term := storage.CurrentTerm()
 	lastIndex := storage.LatestLogEntry().Index
 

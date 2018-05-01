@@ -15,10 +15,10 @@ type actorImpl struct {
 	mode         ActorMode
 	modeStrategy map[ActorMode]actorModeStrategy
 
-	persistentStorage PersistentStorage
+	persistentStorage Storage
 }
 
-func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGateway, config Config) Actor {
+func NewActor(serverID ServerID, storage Storage, gateway ServerGateway, config Config) Actor {
 
 	vstorage := &VolatileStorage{
 		ServerID: serverID,

@@ -9,14 +9,14 @@ import (
 
 const NOVOTE ServerID = ""
 
-// memoryStorage implements the PersistentStorage interface using a memory back persistentStorage. Should only be used for testing!
+// memoryStorage implements the Storage interface using a memory back persistentStorage. Should only be used for testing!
 type memoryStorage struct {
 	currentTerm Term
 	votedFor    ServerID
 	logEntries  []LogEntry
 }
 
-func NewMemoryStorage() PersistentStorage {
+func NewMemoryStorage() Storage {
 	return &memoryStorage{}
 }
 
