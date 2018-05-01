@@ -16,7 +16,7 @@ func TestIntegration__IsAbleToElectLeader(t *testing.T) {
 		t.Skip()
 	}
 
-	servers, _ := testSetup3Servers()
+	servers, _ := testSetup3Servers(t)
 	testWaitUntilLeaderIsElected(t, servers)
 }
 
@@ -25,11 +25,12 @@ func TestIntegration__ProposedChangesArePropagatedToAllServers(t *testing.T) {
 		t.Skip()
 	}
 
-	servers, _ := testSetup3Servers()
+	servers, _ := testSetup3Servers(t)
 	leader := testWaitUntilLeaderIsElected(t, servers)
 
 	leaderServer := servers[leader]
-	leaderServer.SendMessage(raft.NewMessageProposal(leader, leader, "newLogEntry"))
+	err := leaderServer.SendMessage(raft.NewMessageProposal(leader, leader, "newLogEntry"))
+	assert.NoError(t, err)
 
 	testWaitForLogEntryToReplicate(t, servers, "newLogEntry")
 }
@@ -39,7 +40,7 @@ func TestIntegration__NewLeaderIsElectedIfNodeFails(t *testing.T) {
 		t.Skip()
 	}
 
-	servers, gateway := testSetup3Servers()
+	servers, gateway := testSetup3Servers(t)
 	oldLeader := testWaitUntilLeaderIsElected(t, servers)
 
 	gateway.ChangeServerConnectivity(oldLeader, false)
@@ -51,7 +52,7 @@ func TestIntegration__NewLeaderIsElectedIfNodeFails(t *testing.T) {
 	}
 }
 
-func testSetup3Servers() (map[raft.ServerID]raft.Server, *localGateway) {
+func testSetup3Servers(t *testing.T) (map[raft.ServerID]raft.Server, *localGateway) {
 	config := raft.Config{
 		Servers:                    []raft.ServerID{server1ID, server2ID, server3ID},
 		LeaderElectionTimeout:      4,
@@ -59,7 +60,7 @@ func testSetup3Servers() (map[raft.ServerID]raft.Server, *localGateway) {
 		LeaderHeartbeatFrequency:   2,
 	}
 
-	gateway := newLocalServerGateway()
+	gateway := newLocalServerGateway(t)
 
 	servers := make(map[raft.ServerID]raft.Server)
 	for _, serverID := range config.Servers {
@@ -118,12 +119,14 @@ func testWaitForLogEntryToReplicate(t *testing.T, servers map[raft.ServerID]raft
 type localGateway struct {
 	servers map[raft.ServerID]raft.Server
 	downedServers map[raft.ServerID]bool
+	t *testing.T
 }
 
-func newLocalServerGateway() *localGateway {
+func newLocalServerGateway(t *testing.T) *localGateway {
 	return &localGateway{
 		servers: map[raft.ServerID]raft.Server{},
 		downedServers: map[raft.ServerID]bool{},
+		t: t,
 	}
 }
 
@@ -145,5 +148,6 @@ func (g *localGateway) Send(to raft.ServerID, message raft.Message) {
 	}
 
 	server := g.servers[to]
-	server.SendMessage(message)
+	err := server.SendMessage(message)
+	assert.NoError(g.t, err)
 }

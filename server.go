@@ -1,13 +1,17 @@
 package raft
 
 import (
-	"log"
 	"time"
+	"log"
+	"errors"
 )
+
+const tickDuration = 10 * time.Millisecond
+const inboxBufferSize = 100
 
 type Server interface {
 	Run()
-	SendMessage(Message)
+	SendMessage(Message) error
 	CurrentStateName() string
 
 	Log(index LogIndex) (entry LogEntry, ok bool)
@@ -26,8 +30,8 @@ func NewServer(serverID ServerID, storage Storage, gateway ServerGateway, config
 
 	return &server{
 		actor:   actor,
-		ticker:  time.NewTicker(10 * time.Millisecond),
-		inbox:   make(chan Message, 100), // TODO handle deadlocks caused by channel overflow
+		ticker:  time.NewTicker(tickDuration),
+		inbox:   make(chan Message, inboxBufferSize),
 	}
 }
 
@@ -48,9 +52,17 @@ func (s *server) Run() {
 	}()
 }
 
-func (s *server) SendMessage(message Message) {
-	log.Printf("Adding message %s to queue", message.Kind)
-	s.inbox <- message
+// SendMessage adds a message to the server's inbox for later processing. Raises an error
+// if unable to add the message to the queue, for example, due to the inbox being full.
+func (s *server) SendMessage(message Message) error {
+	select {
+	case s.inbox <- message:
+		log.Printf("Added message %s to inbox", message.Kind)
+		return nil
+	default:
+		log.Printf("Unable to add message %s to inbox as inbox is full", message.Kind)
+		return errors.New("unable to add message to inbox as inbox is full")
+	}
 }
 
 func (s *server) CurrentStateName() string {

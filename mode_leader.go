@@ -138,7 +138,10 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 
 	var logEntries []LogEntry
 	if s.hasMatched[targetServer] {
-		// TODO limit the number of entries sent at any given time
+		// BUG: The leader will send all missing log entries in a single message (unbounded) which will
+		// cause failures in certain cases (adding new node, node unavailable for long periods). This issue will be
+		// partially mitigated by snapshots/compaction. Adding a sensible max to number of log entries in a message
+		// may also be useful.
 		logEntries = s.persistentStorage.LogRange(logEntry.Index + 1)
 	}
 
