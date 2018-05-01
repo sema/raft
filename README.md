@@ -10,32 +10,9 @@ as practically possible to the algorithm described in [1].
 
 [1] https://github.com/ongardie/dissertation#readme
 
-
-----
-
-State
-- CommitIndex
-- Term (persistent)
-- Log (persistent)
-
-- MatchIndex (leader)
-- NextIndex (leader)
-
-Semantics
----
-
-- AppendEntriesResponse (resp)
-  - Success: MatchIndex = resp.MatchIndex;
-             NextIndex = resp.MatchIndex + 1
-  - Failure: NextIndex = max(1, NextIndex - 1)
-
-- AppendEntries (req)
-  - Failure (if prev* does not match): send resp with
-       resp.success = false;
-       resp.matchIndex = 0
-  - Success
-
-
-Process to agree on match/next index
--------------------------------------
-
+- Use something else, such as etcd/raft
+- This is my playground, TODOs I want to work on
+  - Writing an actual storage backend, and handle issues around ensuring data is actually persisted (flush to disk)
+  - Raft optionals proposed by [1] (membership changes, compaction)
+  - Automatic redirection - allow clients to talk to any node
+  - Catch and replay of events for debugging/crash analysis

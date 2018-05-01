@@ -7,9 +7,7 @@ import (
 )
 
 func TestStaticDiscovery_Quorum(t *testing.T) {
-	var discovery raft.ServerDiscovery
-
-	discovery = raft.NewStaticDiscovery([]raft.ServerID{"server1"})
+	discovery := raft.NewStaticDiscovery([]raft.ServerID{"server1"})
 	assert.Equal(t, 1, discovery.Quorum())
 
 	discovery = raft.NewStaticDiscovery([]raft.ServerID{"server1", "server2"})
