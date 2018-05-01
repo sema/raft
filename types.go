@@ -101,4 +101,4 @@ const (
 	ExistingMode // special mode to signal a no-op change to modes
 )
 
-type Tick int
+type Tick uint64

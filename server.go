@@ -9,21 +9,25 @@ type Server interface {
 	Run()
 	SendMessage(Message)
 	CurrentStateName() string
+
+	Log(index LogIndex) (entry LogEntry, ok bool)
+	CommitIndex() LogIndex
+	Age() Tick
 }
 
 type server struct {
-	interpreter Actor
-	ticker      *time.Ticker
-	inbox       chan Message
+	actor   Actor
+	ticker  *time.Ticker
+	inbox   chan Message
 }
 
 func NewServer(serverID ServerID, storage Storage, gateway ServerGateway, config Config) Server {
-	interpreter := NewActor(serverID, storage, gateway, config)
+	actor := NewActor(serverID, storage, gateway, config)
 
 	return &server{
-		interpreter: interpreter,
-		ticker:      time.NewTicker(10 * time.Millisecond),
-		inbox:       make(chan Message, 100), // TODO handle deadlocks caused by channel overflow
+		actor:   actor,
+		ticker:  time.NewTicker(10 * time.Millisecond),
+		inbox:   make(chan Message, 100), // TODO handle deadlocks caused by channel overflow
 	}
 }
 
@@ -39,7 +43,7 @@ func (s *server) Run() {
 	go func() {
 		for {
 			message := <-s.inbox
-			s.interpreter.Process(message)
+			s.actor.Process(message)
 		}
 	}()
 }
@@ -50,11 +54,23 @@ func (s *server) SendMessage(message Message) {
 }
 
 func (s *server) CurrentStateName() string {
-	return s.interpreter.ModeName()
+	return s.actor.ModeName()
 }
 
 func (s *server) tick() {
 	s.SendMessage(Message{
 		Kind: msgTick,
 	})
+}
+
+func (s *server) Log(index LogIndex) (entry LogEntry, ok bool) {
+	return s.actor.Log(index)
+}
+
+func (s *server) CommitIndex() LogIndex {
+	return s.actor.CommitIndex()
+}
+
+func (s *server) Age() Tick {
+	return s.actor.Age()
 }

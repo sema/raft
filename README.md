@@ -12,6 +12,7 @@ as practically possible to the algorithm described in [1].
 
 - Use something else, such as etcd/raft
 - This is my playground, TODOs I want to work on
+  - Experiment with godoc and generate proper documentation for package
   - Writing an actual storage backend, and handle issues around ensuring data is actually persisted (flush to disk)
   - Raft optionals proposed by [1] (membership changes, compaction)
   - Automatic redirection - allow clients to talk to any node

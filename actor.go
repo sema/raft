@@ -9,22 +9,28 @@ type Actor interface {
 
 	Mode() ActorMode
 	ModeName() string
+
+	Log(index LogIndex) (entry LogEntry, ok bool)
+	CommitIndex() LogIndex
+	Age() Tick
 }
 
 type actorImpl struct {
-	mode         ActorMode
-	modeStrategy map[ActorMode]actorModeStrategy
+	mode           ActorMode
+	modeStrategies map[ActorMode]actorModeStrategy
 
 	persistentStorage Storage
+	volatileStorage *VolatileStorage
+
+	processedTicks Tick
 }
 
 func NewActor(serverID ServerID, storage Storage, gateway ServerGateway, config Config) Actor {
-
 	vstorage := &VolatileStorage{
 		ServerID: serverID,
 	}
 
-	subInterpreters := map[ActorMode]actorModeStrategy{
+	modeStrategies := map[ActorMode]actorModeStrategy{
 		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, config),
 		CandidateMode: newCandidateMode(storage, vstorage, gateway, config),
 		LeaderMode:    newLeaderMode(storage, vstorage, gateway, config),
@@ -32,7 +38,9 @@ func NewActor(serverID ServerID, storage Storage, gateway ServerGateway, config 
 
 	actor := &actorImpl{
 		persistentStorage: storage,
-		modeStrategy:      subInterpreters,
+		volatileStorage: vstorage,
+		modeStrategies:    modeStrategies,
+		processedTicks: 0,
 	}
 	actor.currentModeStrategy().Enter()
 
@@ -60,6 +68,10 @@ func (i *actorImpl) Process(message Message) {
 	if i.messageFromNewTerm(message) {
 		log.Printf("New term observed, change into FollowerMode")
 		i.changeMode(FollowerMode, message.Term)
+	}
+
+	if message.Kind == msgTick {
+		i.processedTicks++
 	}
 
 	// Specific messages may trigger a mode change
@@ -103,5 +115,17 @@ func (i *actorImpl) changeMode(newMode ActorMode, newTerm Term) {
 }
 
 func (i *actorImpl) currentModeStrategy() actorModeStrategy {
-	return i.modeStrategy[i.mode]
+	return i.modeStrategies[i.mode]
+}
+
+func (i *actorImpl) Log(index LogIndex) (entry LogEntry, ok bool) {
+	return i.persistentStorage.Log(index)
+}
+
+func (i *actorImpl) CommitIndex() LogIndex {
+	return i.volatileStorage.CommitIndex
+}
+
+func (i *actorImpl) Age() Tick {
+	return i.processedTicks
 }
