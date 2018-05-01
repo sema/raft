@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 type Term int
 type ServerID string

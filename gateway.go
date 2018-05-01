@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 //go:generate mockgen -destination=mocks/mock_gateway.go -source=gateway.go
 

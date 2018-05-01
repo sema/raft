@@ -1,4 +1,4 @@
-package go_raft_test
+package raft_test
 
 import (
 	"github.com/golang/mock/gomock"
@@ -11,13 +11,13 @@ func TestEnter__CandidateIncrementsTermAndSendsVoteForMessagesOnEnter(t *testing
 	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
-	assert.Equal(t, go_raft.Term(0), storage.CurrentTerm())
+	assert.Equal(t, raft.Term(0), storage.CurrentTerm())
 
 	// Assertions for voteFor messages in test method
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
-	assert.Equal(t, go_raft.CandidateMode, actor.Mode())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.CandidateMode, actor.Mode())
 }
 
 func TestTick__CandidateRetriesCandidacyIfNoLeaderIsElected(t *testing.T) {
@@ -26,12 +26,12 @@ func TestTick__CandidateRetriesCandidacyIfNoLeaderIsElected(t *testing.T) {
 
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
 
 	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).Times(2)
 	testProgressTime(actor, 11)
 
-	assert.Equal(t, go_raft.Term(2), storage.CurrentTerm())
+	assert.Equal(t, raft.Term(2), storage.CurrentTerm())
 }
 
 func TestAppendEntries__CandidateTransitionsToFollowerIfLeaderIsDetected(t *testing.T) {
@@ -40,15 +40,15 @@ func TestAppendEntries__CandidateTransitionsToFollowerIfLeaderIsDetected(t *test
 
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
 
 	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
 
-	actor.Process(go_raft.NewMessageAppendEntries(
-		localServerID, peerServer1ID, go_raft.Term(1), 0, 0, 0, []go_raft.LogEntry{}))
+	actor.Process(raft.NewMessageAppendEntries(
+		localServerID, peerServer1ID, raft.Term(1), 0, 0, 0, []raft.LogEntry{}))
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
-	assert.Equal(t, go_raft.FollowerMode, actor.Mode())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.FollowerMode, actor.Mode())
 }
 
 func TestTick__CandidateTransitionsToLeaderIfEnoughVotesSucceed(t *testing.T) {
@@ -57,15 +57,15 @@ func TestTick__CandidateTransitionsToLeaderIfEnoughVotesSucceed(t *testing.T) {
 
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
 
 	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any()).AnyTimes()
 
-	actor.Process(go_raft.NewMessageVoteForResponse(
-		localServerID, peerServer1ID, go_raft.Term(1), true))
+	actor.Process(raft.NewMessageVoteForResponse(
+		localServerID, peerServer1ID, raft.Term(1), true))
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
-	assert.Equal(t, go_raft.LeaderMode, actor.Mode())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.LeaderMode, actor.Mode())
 }
 
 func TestTick__CandidateStaysACandidateIfVoteFails(t *testing.T) {
@@ -74,28 +74,28 @@ func TestTick__CandidateStaysACandidateIfVoteFails(t *testing.T) {
 
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
 
-	actor.Process(go_raft.NewMessageVoteForResponse(
-		localServerID, peerServer1ID, go_raft.Term(1), false))
-	actor.Process(go_raft.NewMessageVoteForResponse(
-		localServerID, peerServer2ID, go_raft.Term(1), false))
+	actor.Process(raft.NewMessageVoteForResponse(
+		localServerID, peerServer1ID, raft.Term(1), false))
+	actor.Process(raft.NewMessageVoteForResponse(
+		localServerID, peerServer2ID, raft.Term(1), false))
 
-	assert.Equal(t, go_raft.Term(1), storage.CurrentTerm())
-	assert.Equal(t, go_raft.CandidateMode, actor.Mode())
+	assert.Equal(t, raft.Term(1), storage.CurrentTerm())
+	assert.Equal(t, raft.CandidateMode, actor.Mode())
 }
 
 func TestMsgVoteFor__IsIgnoredByCandidate(t *testing.T) {
 	actor, gatewayMock, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
-	gatewayMock.EXPECT().Send(peerServer2ID, go_raft.NewMessageVoteForResponse(
-		peerServer2ID, localServerID, go_raft.Term(1), false))
+	gatewayMock.EXPECT().Send(peerServer2ID, raft.NewMessageVoteForResponse(
+		peerServer2ID, localServerID, raft.Term(1), false))
 
 	testTransitionFromFollowerToCandidate(actor, gatewayMock, storage)
 
 	actor.Process(
-		go_raft.NewMessageVoteFor(localServerID, peerServer2ID, go_raft.Term(1), 0, 0))
+		raft.NewMessageVoteFor(localServerID, peerServer2ID, raft.Term(1), 0, 0))
 
 	assert.Equal(t, storage.VotedFor(), localServerID)
 }

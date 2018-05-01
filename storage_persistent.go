@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 // TODO go through storage and cleanup API
 // TODO test for proper handling of edge cases in storage
 
-const NO_VOTE ServerID = ""
+const NOVOTE ServerID = ""
 
 // memoryStorage implements the PersistentStorage interface using a memory back persistentStorage. Should only be used for testing!
 type memoryStorage struct {
@@ -37,13 +37,13 @@ func (ms *memoryStorage) VotedFor() ServerID {
 }
 
 func (ms *memoryStorage) SetVotedForIfUnset(votedFor ServerID) {
-	if ms.votedFor == NO_VOTE {
+	if ms.votedFor == NOVOTE {
 		ms.votedFor = votedFor
 	}
 }
 
 func (ms *memoryStorage) ClearVotedFor() {
-	ms.votedFor = NO_VOTE
+	ms.votedFor = NOVOTE
 }
 
 func (ms *memoryStorage) Log(index LogIndex) (LogEntry, bool) {

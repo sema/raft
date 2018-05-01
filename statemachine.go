@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 // TODO implement example state machine
 // - notify that commitIndex increased to allow state machine to take action

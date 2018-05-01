@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 type Config struct {
 	// Followers/Candidates initiate a new leader election if they have not observed

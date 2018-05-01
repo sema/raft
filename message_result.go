@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 type MessageResult struct {
 	// Triggers mode and term change if NewMode != ExistingMode.

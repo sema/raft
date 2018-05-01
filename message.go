@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 type messageKind string
 

@@ -1,4 +1,4 @@
-package go_raft
+package raft
 
 // VolatileStorage contains in-memory state kept only during the
 // lifetime of the server. This state is reset every time the server is restarted.
