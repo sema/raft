@@ -8,7 +8,6 @@ type candidateMode struct {
 	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
-	discovery         ServerDiscovery
 	config            Config
 
 	ticksSinceLastHeartbeat  Tick
@@ -17,12 +16,11 @@ type candidateMode struct {
 	votes map[ServerID]bool
 }
 
-func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
+func newCandidateMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
 	return &candidateMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
-		discovery:         discovery,
 		config:            config,
 	}
 }
@@ -93,7 +91,7 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 
 	// We could fail fast if we detect a quorum of rejects. Only looking at the positive case
 	// is enough for Raft to work however.
-	if votesPositive >= s.discovery.Quorum() {
+	if votesPositive >= s.config.Quorum() {
 		result = newMessageResult()
 		result.ChangeMode(LeaderMode, s.persistentStorage.CurrentTerm())
 		return result
@@ -117,7 +115,7 @@ func (s *candidateMode) Enter() {
 	}
 
 	// Send RPCs
-	for _, serverID := range s.discovery.Servers() {
+	for _, serverID := range s.config.Servers {
 		if serverID == s.volatileStorage.ServerID {
 			continue // skip self
 		}

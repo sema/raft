@@ -10,9 +10,8 @@ const server2ID = raft.ServerID("server2.raft.local")
 const server3ID = raft.ServerID("server3.raft.local")
 
 func TestIntegration__IsAbleToElectLeader(t *testing.T) {
-	serverIDs := []raft.ServerID{server1ID, server2ID, server3ID}
-
 	config := raft.Config{
+		Servers:                    []raft.ServerID{server1ID, server2ID, server3ID},
 		LeaderElectionTimeout:      4,
 		LeaderElectionTimeoutSplay: 4,
 		LeaderHeartbeatFrequency:   2,
@@ -20,12 +19,11 @@ func TestIntegration__IsAbleToElectLeader(t *testing.T) {
 
 	servers := make(map[raft.ServerID]raft.Server)
 
-	for _, serverID := range serverIDs {
+	for _, serverID := range config.Servers {
 		gateway := raft.NewLocalServerGateway(servers)
-		discovery := raft.NewStaticDiscovery(serverIDs)
 		persistentStorage := raft.NewMemoryStorage()
 
-		server := raft.NewServer(serverID, persistentStorage, gateway, discovery, config)
+		server := raft.NewServer(serverID, persistentStorage, gateway, config)
 
 		servers[serverID] = server
 	}

@@ -6,19 +6,17 @@ type followerMode struct {
 	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
-	discovery         ServerDiscovery
 	config            Config
 
 	ticksSinceLastHeartbeat  Tick
 	ticksUntilLeaderElection Tick
 }
 
-func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
+func NewFollowerMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
 	return &followerMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
-		discovery:         discovery,
 		config:            config,
 	}
 }

@@ -18,16 +18,16 @@ type actorImpl struct {
 	persistentStorage PersistentStorage
 }
 
-func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Actor {
+func NewActor(serverID ServerID, storage PersistentStorage, gateway ServerGateway, config Config) Actor {
 
 	vstorage := &VolatileStorage{
 		ServerID: serverID,
 	}
 
 	subInterpreters := map[ActorMode]actorModeStrategy{
-		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, discovery, config),
-		CandidateMode: newCandidateMode(storage, vstorage, gateway, discovery, config),
-		LeaderMode:    newLeaderMode(storage, vstorage, gateway, discovery, config),
+		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, config),
+		CandidateMode: newCandidateMode(storage, vstorage, gateway, config),
+		LeaderMode:    newLeaderMode(storage, vstorage, gateway, config),
 	}
 
 	actor := &actorImpl{

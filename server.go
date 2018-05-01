@@ -17,8 +17,8 @@ type server struct {
 	inbox       chan Message
 }
 
-func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) Server {
-	interpreter := NewActor(serverID, storage, gateway, discovery, config)
+func NewServer(serverID ServerID, storage PersistentStorage, gateway ServerGateway, config Config) Server {
+	interpreter := NewActor(serverID, storage, gateway, config)
 
 	return &server{
 		interpreter: interpreter,

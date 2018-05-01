@@ -20,16 +20,15 @@ func newActorTestSetup(t *testing.T) (
 
 	gatewayMock := mock_raft.NewMockServerGateway(mockCtrl)
 	storage := raft.NewMemoryStorage()
-	discovery := raft.NewStaticDiscovery(
-		[]raft.ServerID{localServerID, peerServer1ID, peerServer2ID})
 
 	config := raft.Config{
+		Servers: []raft.ServerID{localServerID, peerServer1ID, peerServer2ID},
 		LeaderElectionTimeout:      10,
 		LeaderElectionTimeoutSplay: 0,
 		LeaderHeartbeatFrequency:   5,
 	}
 
-	actor := raft.NewActor(localServerID, storage, gatewayMock, discovery, config)
+	actor := raft.NewActor(localServerID, storage, gatewayMock, config)
 
 	return actor, gatewayMock, storage, cleanup
 }

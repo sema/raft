@@ -10,7 +10,6 @@ type leaderMode struct {
 	persistentStorage PersistentStorage
 	volatileStorage   *VolatileStorage
 	gateway           ServerGateway
-	discovery         ServerDiscovery
 	config            Config
 
 	numTicksSinceLastHeartbeat Tick
@@ -20,12 +19,11 @@ type leaderMode struct {
 	hasMatched map[ServerID]bool
 }
 
-func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, discovery ServerDiscovery, config Config) actorModeStrategy {
+func newLeaderMode(persistentStorage PersistentStorage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
 	return &leaderMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
 		gateway:           gateway,
-		discovery:         discovery,
 		config:            config,
 	}
 }
@@ -41,7 +39,7 @@ func (s *leaderMode) Enter() {
 	s.matchIndex = map[ServerID]LogIndex{}
 	s.hasMatched = map[ServerID]bool{}
 
-	for _, serverID := range s.discovery.Servers() {
+	for _, serverID := range s.config.Servers {
 		s.nextIndex[serverID] = LogIndex(s.persistentStorage.LogLength() + 1)
 		s.matchIndex[serverID] = 0
 		s.hasMatched[serverID] = false
@@ -121,7 +119,7 @@ func (s *leaderMode) Exit() {
 }
 
 func (s *leaderMode) broadcastHeartbeat() {
-	for _, serverID := range s.discovery.Servers() {
+	for _, serverID := range s.config.Servers {
 		if serverID == s.volatileStorage.ServerID {
 			continue // skip self
 		}
@@ -167,7 +165,7 @@ func (s *leaderMode) advanceCommitIndex() {
 
 	sort.Ints(matchIndexes)
 
-	quorum := s.discovery.Quorum()
+	quorum := s.config.Quorum()
 	quorumIndex := LogIndex(matchIndexes[quorum-1])
 
 	if s.volatileStorage.CommitIndex < quorumIndex {
