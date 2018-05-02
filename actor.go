@@ -4,6 +4,16 @@ import (
 	"log"
 )
 
+type ActorMode int
+
+const (
+	FollowerMode ActorMode = iota
+	CandidateMode
+	LeaderMode
+
+	ExistingMode // special mode to signal a no-op change to modes
+)
+
 type Actor interface {
 	Process(message Message)
 
@@ -13,6 +23,16 @@ type Actor interface {
 	Log(index LogIndex) (entry LogEntry, ok bool)
 	CommitIndex() LogIndex
 	Age() Tick
+}
+
+type actorModeStrategy interface {
+	Name() string
+
+	PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term)
+	Process(message Message) (result *MessageResult)
+
+	Enter()
+	Exit()
 }
 
 type actorImpl struct {

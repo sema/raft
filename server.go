@@ -9,6 +9,10 @@ import (
 const tickDuration = 10 * time.Millisecond
 const inboxBufferSize = 100
 
+type Term uint64
+type ServerID string
+type Tick uint64
+
 type Server interface {
 	Start()
 	Stop()

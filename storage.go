@@ -28,6 +28,20 @@ type Storage interface {
 	MergeLogs([]LogEntry)
 }
 
+type LogEntry struct {
+	Term    Term
+	Index   LogIndex
+	Payload string
+}
+
+func NewLogEntry(term Term, index LogIndex, payload string) LogEntry {
+	return LogEntry{
+		Term:    term,
+		Index:   index,
+		Payload: payload,
+	}
+}
+
 type memoryStorage struct {
 	currentTerm Term
 	votedFor    ServerID
