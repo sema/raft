@@ -1,8 +1,8 @@
-Yet another Raft implementation in GO
+Yet another Raft implementation in Go
 =====================================
 
 Disclaimer: This Raft implementation exists purely for my own educational purposes.
-Please don't decide to use this code anywhere important. Just go an use etcd's raft implementation.
+Please don't decide to use this code anywhere important. Just use etcd's raft implementation.
 
 Implementation of the raft algorithm as described in Diego Ongaro's PhD dissertation [1].
 
