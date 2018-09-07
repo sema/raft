@@ -14,3 +14,6 @@ test-integrtion:
 
 mockgen:
 	go generate pkg/actor/gateway.go
+
+check:
+	dep check
