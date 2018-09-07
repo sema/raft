@@ -1,4 +1,4 @@
-package raft
+package actor
 
 type LogIndex uint64
 
@@ -17,4 +17,3 @@ func MinLogIndex(v1 LogIndex, v2 LogIndex) LogIndex {
 
 	return v2
 }
-

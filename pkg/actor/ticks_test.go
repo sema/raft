@@ -1,8 +1,9 @@
-package raft
+package actor
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetTicksWithSplay__ZeroSplayReturnsBase(t *testing.T) {

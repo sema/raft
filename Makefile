@@ -11,3 +11,6 @@ test-unit:
 
 test-integrtion:
 	go test -run=Integration
+
+mockgen:
+	go generate pkg/actor/gateway.go

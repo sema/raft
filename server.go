@@ -4,42 +4,38 @@ import (
 	"errors"
 	"log"
 	"time"
+
+	"github.com/sema/raft/pkg/actor"
 )
 
 const tickDuration = 10 * time.Millisecond
 const inboxBufferSize = 100
 
-type Term uint64
-type ServerID string
-type Tick uint64
-
 type Server interface {
 	Start()
 	Stop()
-	SendMessage(Message) error
+	SendMessage(actor.Message) error
 	CurrentStateName() string
 
-	Log(index LogIndex) (entry LogEntry, ok bool)
-	CommitIndex() LogIndex
-	Age() Tick
+	Log(index actor.LogIndex) (entry actor.LogEntry, ok bool)
+	CommitIndex() actor.LogIndex
+	Age() actor.Tick
 }
 
 type server struct {
-	actor    Actor
+	actor    actor.Actor
 	ticker   *time.Ticker
-	inbox    chan Message
-	serverID ServerID
+	inbox    chan actor.Message
+	serverID actor.ServerID
 	stop     chan bool
 	done     chan bool
 }
 
-func NewServer(serverID ServerID, storage Storage, gateway ServerGateway, config Config) Server {
-	actor := NewActor(serverID, storage, gateway, config)
-
+func NewServer(serverID actor.ServerID, storage actor.Storage, gateway actor.ServerGateway, config actor.Config) Server {
 	return &server{
-		actor:    actor,
+		actor:    actor.NewActor(serverID, storage, gateway, config),
 		ticker:   time.NewTicker(tickDuration),
-		inbox:    make(chan Message, inboxBufferSize),
+		inbox:    make(chan actor.Message, inboxBufferSize),
 		serverID: serverID,
 		stop:     make(chan bool, 1),
 		done:     make(chan bool, 1),
@@ -51,7 +47,7 @@ func (s *server) Start() {
 	for {
 		select {
 		case <-s.ticker.C:
-			s.actor.Process(NewMessageTick(s.serverID, s.serverID))
+			s.actor.Process(actor.NewMessageTick(s.serverID, s.serverID))
 		case message := <-s.inbox:
 			s.actor.Process(message)
 		case <-s.stop:
@@ -70,7 +66,7 @@ func (s *server) Stop() {
 
 // SendMessage adds a message to the server's inbox for later processing. Raises an error
 // if unable to add the message to the queue, for example, due to the inbox being full.
-func (s *server) SendMessage(message Message) error {
+func (s *server) SendMessage(message actor.Message) error {
 	select {
 	case s.inbox <- message:
 		log.Printf("Added message %s to inbox", message.Kind)
@@ -85,14 +81,14 @@ func (s *server) CurrentStateName() string {
 	return s.actor.ModeName()
 }
 
-func (s *server) Log(index LogIndex) (entry LogEntry, ok bool) {
+func (s *server) Log(index actor.LogIndex) (entry actor.LogEntry, ok bool) {
 	return s.actor.Log(index)
 }
 
-func (s *server) CommitIndex() LogIndex {
+func (s *server) CommitIndex() actor.LogIndex {
 	return s.actor.CommitIndex()
 }
 
-func (s *server) Age() Tick {
+func (s *server) Age() actor.Tick {
 	return s.actor.Age()
 }

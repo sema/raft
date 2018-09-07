@@ -1,15 +1,16 @@
-package raft_test
+package raft
 
 import (
-	"github.com/sema/raft"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/sema/raft/pkg/actor"
+	"github.com/stretchr/testify/assert"
 )
 
-const server1ID = raft.ServerID("server1.raft.local")
-const server2ID = raft.ServerID("server2.raft.local")
-const server3ID = raft.ServerID("server3.raft.local")
-const tickLimit = raft.Tick(500)
+const server1ID = actor.ServerID("server1.raft.local")
+const server2ID = actor.ServerID("server2.raft.local")
+const server3ID = actor.ServerID("server3.raft.local")
+const tickLimit = actor.Tick(500)
 
 func TestIntegration__IsAbleToElectLeader(t *testing.T) {
 	if testing.Short() {
@@ -29,7 +30,7 @@ func TestIntegration__ProposedChangesArePropagatedToAllServers(t *testing.T) {
 	leader := testWaitUntilLeaderIsElected(t, servers)
 
 	leaderServer := servers[leader]
-	err := leaderServer.SendMessage(raft.NewMessageProposal(leader, leader, "newLogEntry"))
+	err := leaderServer.SendMessage(actor.NewMessageProposal(leader, leader, "newLogEntry"))
 	assert.NoError(t, err)
 
 	testWaitForLogEntryToReplicate(t, servers, "newLogEntry")
@@ -52,9 +53,9 @@ func TestIntegration__NewLeaderIsElectedIfNodeFails(t *testing.T) {
 	}
 }
 
-func testSetup3Servers(t *testing.T) (map[raft.ServerID]raft.Server, *localGateway) {
-	config := raft.Config{
-		Servers:                    []raft.ServerID{server1ID, server2ID, server3ID},
+func testSetup3Servers(t *testing.T) (map[actor.ServerID]Server, *localGateway) {
+	config := actor.Config{
+		Servers:                    []actor.ServerID{server1ID, server2ID, server3ID},
 		LeaderElectionTimeout:      4,
 		LeaderElectionTimeoutSplay: 4,
 		LeaderHeartbeatFrequency:   2,
@@ -62,10 +63,10 @@ func testSetup3Servers(t *testing.T) (map[raft.ServerID]raft.Server, *localGatew
 
 	gateway := newLocalServerGateway(t)
 
-	servers := make(map[raft.ServerID]raft.Server)
+	servers := make(map[actor.ServerID]Server)
 	for _, serverID := range config.Servers {
-		storage := raft.NewMemoryStorage()
-		server := raft.NewServer(serverID, storage, gateway, config)
+		storage := actor.NewMemoryStorage()
+		server := NewServer(serverID, storage, gateway, config)
 		gateway.RegisterServer(serverID, server)
 
 		servers[serverID] = server
@@ -78,7 +79,7 @@ func testSetup3Servers(t *testing.T) (map[raft.ServerID]raft.Server, *localGatew
 	return servers, gateway
 }
 
-func testWaitUntilLeaderIsElected(t *testing.T, servers map[raft.ServerID]raft.Server) raft.ServerID {
+func testWaitUntilLeaderIsElected(t *testing.T, servers map[actor.ServerID]Server) actor.ServerID {
 	for {
 		for serverID, server := range servers {
 			if server.CurrentStateName() == "LeaderMode" {
@@ -90,13 +91,13 @@ func testWaitUntilLeaderIsElected(t *testing.T, servers map[raft.ServerID]raft.S
 	}
 }
 
-func testCheckTickLimit(t *testing.T, server raft.Server) {
+func testCheckTickLimit(t *testing.T, server Server) {
 	if server.Age() > tickLimit {
 		t.Errorf("Test timed out as server %s exceeded tick limit of %d", server, tickLimit)
 	}
 }
 
-func testWaitForLogEntryToReplicate(t *testing.T, servers map[raft.ServerID]raft.Server, payload string) {
+func testWaitForLogEntryToReplicate(t *testing.T, servers map[actor.ServerID]Server, payload string) {
 	for {
 		logEntryOnAllServers := true
 		for _, server := range servers {
@@ -117,28 +118,28 @@ func testWaitForLogEntryToReplicate(t *testing.T, servers map[raft.ServerID]raft
 }
 
 type localGateway struct {
-	servers       map[raft.ServerID]raft.Server
-	downedServers map[raft.ServerID]bool
+	servers       map[actor.ServerID]Server
+	downedServers map[actor.ServerID]bool
 	t             *testing.T
 }
 
 func newLocalServerGateway(t *testing.T) *localGateway {
 	return &localGateway{
-		servers:       map[raft.ServerID]raft.Server{},
-		downedServers: map[raft.ServerID]bool{},
+		servers:       map[actor.ServerID]Server{},
+		downedServers: map[actor.ServerID]bool{},
 		t:             t,
 	}
 }
 
-func (g *localGateway) RegisterServer(serverID raft.ServerID, server raft.Server) {
+func (g *localGateway) RegisterServer(serverID actor.ServerID, server Server) {
 	g.servers[serverID] = server
 }
 
-func (g *localGateway) ChangeServerConnectivity(serverID raft.ServerID, connected bool) {
+func (g *localGateway) ChangeServerConnectivity(serverID actor.ServerID, connected bool) {
 	g.downedServers[serverID] = !connected
 }
 
-func (g *localGateway) Send(to raft.ServerID, message raft.Message) {
+func (g *localGateway) Send(to actor.ServerID, message actor.Message) {
 	if g.downedServers[to] {
 		return // drop all traffic to downed server
 	}

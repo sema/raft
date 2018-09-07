@@ -1,4 +1,4 @@
-package raft
+package actor
 
 type MessageResult struct {
 	// Triggers mode and term change if NewMode != ExistingMode.

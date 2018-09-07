@@ -1,4 +1,4 @@
-package raft
+package actor
 
 import "math/rand"
 

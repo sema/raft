@@ -1,9 +1,10 @@
-package raft_test
+package actor
 
 import (
+	"testing"
+
 	"github.com/sema/raft"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestConfig_Quorum(t *testing.T) {

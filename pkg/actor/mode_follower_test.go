@@ -1,10 +1,11 @@
-package raft_test
+package actor
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/sema/raft"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMsgVoteFor__IsAbleToGetAVote(t *testing.T) {
