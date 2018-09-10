@@ -1,3 +1,6 @@
 .idea
 cover.out
 *~
+
+# exclude cmds
+srctl
