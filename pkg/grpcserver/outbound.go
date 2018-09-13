@@ -31,10 +31,10 @@ type OutboundGRPCServer struct {
 }
 
 // NewOutboundGRPCServer returns new instance of OutboundGRPCServer
-func NewOutboundGRPCServer(server server.Server, config map[actor.ServerID]DiscoveryConfig) *OutboundGRPCServer {
+func NewOutboundGRPCServer(server server.Server, discovery map[actor.ServerID]DiscoveryConfig) *OutboundGRPCServer {
 	return &OutboundGRPCServer{
 		source:    server,
-		discovery: config,
+		discovery: discovery,
 		streams:   make(map[actor.ServerID]pb.SRServer_SendMessagesClient),
 		quit:      make(chan bool),
 		done:      make(chan bool),
@@ -52,7 +52,11 @@ func (s *OutboundGRPCServer) Serve() {
 			})
 			return
 		case message := <-s.source.Outbox():
-			s.sendMessage(message)
+			log.Printf("Sending message %s to %s", message.Kind, message.To)
+			err := s.sendMessage(message)
+			if err != nil {
+				log.Printf("Error when sending message: %s", err)
+			}
 		}
 	}
 }
@@ -95,7 +99,7 @@ func (s *OutboundGRPCServer) createStream(serverID actor.ServerID) (pb.SRServer_
 			"Unable to connect to server %s due to missing address", serverID))
 	}
 
-	conn, err := grpc.Dial(config.addressRemote, grpc.WithInsecure())
+	conn, err := grpc.Dial(config.AddressRemote, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

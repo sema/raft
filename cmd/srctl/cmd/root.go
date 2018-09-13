@@ -11,7 +11,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "srctl",
 	Short: "SR command line tool",
-	Long:  `SR is a simplistic key value store based on the raft algorithm.`,
+	Long:  `Command line tool for the SR key value store.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

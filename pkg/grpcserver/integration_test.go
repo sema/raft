@@ -80,9 +80,8 @@ func testSetup3Servers(t *testing.T) (map[actor.ServerID]server.Server, func()) 
 	for _, serverID := range config.Servers {
 		socketPath := fmt.Sprintf("unix:%s/%s.socket", tmpDir, serverID)
 		discovery[serverID] = DiscoveryConfig{
-			serverID:      actor.ServerID(serverID),
-			addressLocal:  socketPath,
-			addressRemote: socketPath,
+			ServerID:      actor.ServerID(serverID),
+			AddressRemote: socketPath,
 		}
 	}
 
@@ -97,7 +96,7 @@ func testSetup3Servers(t *testing.T) (map[actor.ServerID]server.Server, func()) 
 		go svr.Start()
 
 		inboundServer := NewInboundGRPCServer(svr)
-		go inboundServer.Serve(discovery[serverID].addressLocal)
+		go inboundServer.Serve(discovery[serverID].AddressRemote)
 
 		outboundServer := NewOutboundGRPCServer(svr, discovery)
 		go outboundServer.Serve()
