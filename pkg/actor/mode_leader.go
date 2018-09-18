@@ -9,7 +9,6 @@ import (
 type leaderMode struct {
 	persistentStorage Storage
 	volatileStorage   *VolatileStorage
-	gateway           ServerGateway
 	config            Config
 
 	numTicksSinceLastHeartbeat Tick
@@ -19,11 +18,10 @@ type leaderMode struct {
 	hasMatched map[ServerID]bool
 }
 
-func newLeaderMode(persistentStorage Storage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
+func newLeaderMode(persistentStorage Storage, volatileStorage *VolatileStorage, config Config) actorModeStrategy {
 	return &leaderMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
-		gateway:           gateway,
 		config:            config,
 	}
 }
@@ -32,7 +30,7 @@ func (s *leaderMode) Name() (name string) {
 	return "LeaderMode"
 }
 
-func (s *leaderMode) Enter() {
+func (s *leaderMode) Enter() (messagesOut []Message) {
 	s.numTicksSinceLastHeartbeat = 0
 
 	s.nextIndex = map[ServerID]LogIndex{}
@@ -47,7 +45,7 @@ func (s *leaderMode) Enter() {
 
 	s.matchIndex[s.volatileStorage.ServerID] = s.persistentStorage.LatestLogEntry().Index
 
-	s.broadcastHeartbeat()
+	return s.createHeartbeatBroadcastMessages()
 }
 
 func (s *leaderMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {
@@ -72,12 +70,15 @@ func (s *leaderMode) Process(message Message) *MessageResult {
 func (s *leaderMode) handleTick(message Message) *MessageResult {
 	s.numTicksSinceLastHeartbeat++
 
-	if s.numTicksSinceLastHeartbeat >= s.config.LeaderHeartbeatFrequency {
-		s.numTicksSinceLastHeartbeat = 0
-		s.broadcastHeartbeat()
+	if s.numTicksSinceLastHeartbeat < s.config.LeaderHeartbeatFrequency {
+		return newMessageResult()
 	}
 
-	return newMessageResult()
+	s.numTicksSinceLastHeartbeat = 0
+	result := newMessageResult()
+	result.WithMessages(s.createHeartbeatBroadcastMessages())
+
+	return result
 }
 
 func (s *leaderMode) handleProposal(message Message) *MessageResult {
@@ -98,8 +99,10 @@ func (s *leaderMode) handleAppendEntriesResponse(message Message) *MessageResult
 		}
 
 		s.nextIndex[message.From] = MaxLogIndex(s.nextIndex[message.From]-1, 1)
-		s.heartbeat(message.From)
-		return newMessageResult()
+
+		result := newMessageResult()
+		result.WithMessage(s.createHeartbeatMessage(message.From))
+		return result
 	}
 
 	s.hasMatched[message.From] = true
@@ -118,16 +121,18 @@ func (s *leaderMode) Exit() {
 
 }
 
-func (s *leaderMode) broadcastHeartbeat() {
+func (s *leaderMode) createHeartbeatBroadcastMessages() []Message {
+	var result []Message
 	for _, serverID := range s.config.Servers {
 		if serverID == s.volatileStorage.ServerID {
 			continue // skip self
 		}
-		s.heartbeat(serverID)
+		result = append(result, s.createHeartbeatMessage(serverID))
 	}
+	return result
 }
 
-func (s *leaderMode) heartbeat(targetServer ServerID) {
+func (s *leaderMode) createHeartbeatMessage(targetServer ServerID) Message {
 	commitIndex := MinLogIndex(s.volatileStorage.CommitIndex, s.matchIndex[targetServer])
 
 	currentIndex := s.nextIndex[targetServer] - 1
@@ -145,7 +150,7 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		logEntries = s.persistentStorage.LogRange(logEntry.Index + 1)
 	}
 
-	s.gateway.Send(targetServer, NewMessageAppendEntries(
+	return NewMessageAppendEntries(
 		targetServer,
 		s.volatileStorage.ServerID,
 		s.persistentStorage.CurrentTerm(),
@@ -156,7 +161,7 @@ func (s *leaderMode) heartbeat(targetServer ServerID) {
 		logEntry.Term,
 
 		logEntries,
-	))
+	)
 }
 
 func (s *leaderMode) advanceCommitIndex() {

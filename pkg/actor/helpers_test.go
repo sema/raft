@@ -5,21 +5,20 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/sema/raft/pkg/actor"
-	"github.com/sema/raft/pkg/actor/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 const localServerID = actor.ServerID("server1.servers.local")
 const peerServer1ID = actor.ServerID("server2.servers.local")
 const peerServer2ID = actor.ServerID("server3.servers.local")
 
-// Base test setup for an actor, with in-memory storage, mocked gateway, and 2 peer actors.
+// Base test setup for an actor, with in-memory storage, and 2 peer actors.
 func newActorTestSetup(t *testing.T) (
-	actor.Actor, *mock_actor.MockServerGateway, actor.Storage, func()) {
+	actor.Actor, actor.Storage, func()) {
 
 	mockCtrl := gomock.NewController(t)
 	cleanup := mockCtrl.Finish
 
-	gatewayMock := mock_actor.NewMockServerGateway(mockCtrl)
 	storage := actor.NewMemoryStorage()
 
 	config := actor.Config{
@@ -29,42 +28,48 @@ func newActorTestSetup(t *testing.T) (
 		LeaderHeartbeatFrequency:   5,
 	}
 
-	act := actor.NewActor(localServerID, storage, gatewayMock, config)
+	act := actor.NewActor(localServerID, storage, config)
 
-	return act, gatewayMock, storage, cleanup
+	return act, storage, cleanup
 }
 
-func testTransitionFromFollowerToCandidate(act actor.Actor, gatewayMock *mock_actor.MockServerGateway, storage actor.Storage) {
+func testTransitionFromFollowerToCandidate(t *testing.T, act actor.Actor, storage actor.Storage) {
 	prevIndex := storage.LatestLogEntry().Index
 	prevTerm := storage.LatestLogEntry().Term
 
-	gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageVoteFor(
-		peerServer1ID, localServerID, actor.Term(1), prevIndex, prevTerm))
-	gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageVoteFor(
-		peerServer2ID, localServerID, actor.Term(1), prevIndex, prevTerm))
-
-	testProgressTime(act, 11)
-}
-
-func testProgressTime(act actor.Actor, numTicks int) {
-	for i := 0; i < numTicks; i++ {
-		act.Process(actor.NewMessageTick(localServerID, localServerID))
+	messagesExpected := []actor.Message{
+		actor.NewMessageVoteFor(peerServer1ID, localServerID, actor.Term(1), prevIndex, prevTerm),
+		actor.NewMessageVoteFor(peerServer2ID, localServerID, actor.Term(1), prevIndex, prevTerm),
 	}
+	messagesOut := testProgressTime(act, 11)
+	assert.Equal(t, messagesExpected, messagesOut)
 }
 
-func testTransitionFromFollowerToLeader(act actor.Actor, gatewayMock *mock_actor.MockServerGateway, storage actor.Storage) {
-	testTransitionFromFollowerToCandidate(act, gatewayMock, storage)
+func testProgressTime(act actor.Actor, numTicks int) []actor.Message {
+	var messages []actor.Message
+
+	for i := 0; i < numTicks; i++ {
+		messagesOut := act.Process(actor.NewMessageTick(localServerID, localServerID))
+		messages = append(messages, messagesOut...)
+	}
+
+	return messages
+}
+
+func testTransitionFromFollowerToLeader(t *testing.T, act actor.Actor, storage actor.Storage) {
+	testTransitionFromFollowerToCandidate(t, act, storage)
 
 	prevIndex := storage.LatestLogEntry().Index
 	prevTerm := storage.LatestLogEntry().Term
 
-	gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-		peerServer1ID, localServerID, actor.Term(1), 0, prevIndex, prevTerm, nil))
-	gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-		peerServer2ID, localServerID, actor.Term(1), 0, prevIndex, prevTerm, nil))
-
-	act.Process(actor.NewMessageVoteForResponse(
+	messagesExpected := []actor.Message{
+		actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), 0, prevIndex, prevTerm, nil),
+		actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), 0, prevIndex, prevTerm, nil),
+	}
+	messagesOut := act.Process(actor.NewMessageVoteForResponse(
 		localServerID, peerServer1ID, actor.Term(1), true))
+	assert.Equal(t, messagesExpected, messagesOut)
+
 }
 
 func testFollowersReplicateUp(act actor.Actor, storage actor.Storage) {

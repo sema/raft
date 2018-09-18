@@ -5,7 +5,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/sema/raft/pkg/actor"
-	"github.com/sema/raft/pkg/actor/mocks"
 )
 
 const localServerID = actor.ServerID("server1.servers.local")
@@ -14,7 +13,6 @@ func TestServer_StopCausesStartToReturn(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	gatewayMock := mock_actor.NewMockServerGateway(mockCtrl)
 	storage := actor.NewMemoryStorage()
 
 	config := actor.Config{
@@ -24,7 +22,7 @@ func TestServer_StopCausesStartToReturn(t *testing.T) {
 		LeaderHeartbeatFrequency:   5,
 	}
 
-	server := NewServer(localServerID, storage, gatewayMock, config)
+	server := NewServer(localServerID, storage, config)
 
 	startReturned := false
 	stopReturned := false

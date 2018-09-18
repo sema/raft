@@ -5,18 +5,16 @@ import "log"
 type followerMode struct {
 	persistentStorage Storage
 	volatileStorage   *VolatileStorage
-	gateway           ServerGateway
 	config            Config
 
 	ticksSinceLastHeartbeat  Tick
 	ticksUntilLeaderElection Tick
 }
 
-func NewFollowerMode(persistentStorage Storage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
+func NewFollowerMode(persistentStorage Storage, volatileStorage *VolatileStorage, config Config) actorModeStrategy {
 	return &followerMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
-		gateway:           gateway,
 		config:            config,
 	}
 }
@@ -25,9 +23,10 @@ func (s *followerMode) Name() (name string) {
 	return "FollowerMode"
 }
 
-func (s *followerMode) Enter() {
+func (s *followerMode) Enter() (messagesOut []Message) {
 	s.ticksSinceLastHeartbeat = 0
 	s.ticksUntilLeaderElection = getTicksWithSplay(s.config.LeaderElectionTimeout, s.config.LeaderElectionTimeoutSplay)
+	return nil
 }
 
 func (s *followerMode) PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term) {
@@ -72,22 +71,23 @@ func (s *followerMode) handleRequestVote(message Message) *MessageResult {
 
 	voteGranted := s.persistentStorage.VotedFor() == message.From
 
-	s.gateway.Send(message.From, NewMessageVoteForResponse(message.From, s.volatileStorage.ServerID, currentTerm, voteGranted))
-	return newMessageResult()
+	result := newMessageResult()
+	result.WithMessage(NewMessageVoteForResponse(message.From, s.volatileStorage.ServerID, currentTerm, voteGranted))
+	return result
 }
 
 func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 	s.ticksSinceLastHeartbeat = 0
 
 	if !s.isLogConsistent(message.PreviousLogIndex, message.PreviousLogTerm) {
-		s.gateway.Send(message.From, NewMessageAppendEntriesResponse(
+		result := newMessageResult()
+		result.WithMessage(NewMessageAppendEntriesResponse(
 			message.From,
 			s.volatileStorage.ServerID,
 			s.persistentStorage.CurrentTerm(),
 			false,
 			0))
-
-		return newMessageResult()
+		return result
 	}
 
 	s.persistentStorage.MergeLogs(message.LogEntries)
@@ -103,14 +103,15 @@ func (s *followerMode) handleAppendEntries(message Message) *MessageResult {
 	}
 
 	logEntry := s.persistentStorage.LatestLogEntry()
-	s.gateway.Send(message.From, NewMessageAppendEntriesResponse(
+
+	result := newMessageResult()
+	result.WithMessage(NewMessageAppendEntriesResponse(
 		message.From,
 		s.volatileStorage.ServerID,
 		s.persistentStorage.CurrentTerm(),
 		true,
 		logEntry.Index))
-
-	return newMessageResult()
+	return result
 }
 
 func (s *followerMode) tryVoteForCandidate(lastLogTerm Term, lastLogIndex LogIndex, candidateID ServerID) {

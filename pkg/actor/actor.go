@@ -15,7 +15,7 @@ const (
 )
 
 type Actor interface {
-	Process(message Message)
+	Process(message Message) []Message
 
 	Mode() ActorMode
 	ModeName() string
@@ -31,7 +31,7 @@ type actorModeStrategy interface {
 	PreExecuteModeChange(message Message) (newMode ActorMode, newTerm Term)
 	Process(message Message) (result *MessageResult)
 
-	Enter()
+	Enter() (messagesOut []Message)
 	Exit()
 }
 
@@ -45,15 +45,15 @@ type actorImpl struct {
 	processedTicks Tick
 }
 
-func NewActor(serverID ServerID, storage Storage, gateway ServerGateway, config Config) Actor {
+func NewActor(serverID ServerID, storage Storage, config Config) Actor {
 	vstorage := &VolatileStorage{
 		ServerID: serverID,
 	}
 
 	modeStrategies := map[ActorMode]actorModeStrategy{
-		FollowerMode:  NewFollowerMode(storage, vstorage, gateway, config),
-		CandidateMode: newCandidateMode(storage, vstorage, gateway, config),
-		LeaderMode:    newLeaderMode(storage, vstorage, gateway, config),
+		FollowerMode:  NewFollowerMode(storage, vstorage, config),
+		CandidateMode: newCandidateMode(storage, vstorage, config),
+		LeaderMode:    newLeaderMode(storage, vstorage, config),
 	}
 
 	actor := &actorImpl{
@@ -75,19 +75,22 @@ func (i *actorImpl) ModeName() string {
 	return i.currentModeStrategy().Name()
 }
 
-func (i *actorImpl) Process(message Message) {
+func (i *actorImpl) Process(message Message) []Message {
 	log.Printf("Process message %s", message.Kind)
 
 	// Messages originating from previous terms are discarded
 	if i.messageHasExpired(message) {
 		log.Printf("Discard message as it has expired")
-		return
+		return nil
 	}
+
+	var messagesOut []Message
 
 	// Messages belonging to newer terms change server into a FollowerMode
 	if i.messageFromNewTerm(message) {
 		log.Printf("New term observed, change into FollowerMode")
-		i.changeMode(FollowerMode, message.Term)
+		messages := i.changeMode(FollowerMode, message.Term)
+		messagesOut = append(messagesOut, messages...)
 	}
 
 	if message.Kind == msgTick {
@@ -96,13 +99,18 @@ func (i *actorImpl) Process(message Message) {
 
 	// Specific messages may trigger a mode change
 	if newMode, newTerm := i.currentModeStrategy().PreExecuteModeChange(message); newMode != ExistingMode {
-		i.changeMode(newMode, newTerm)
+		messages := i.changeMode(newMode, newTerm)
+		messagesOut = append(messagesOut, messages...)
 	}
 
 	messageResult := i.currentModeStrategy().Process(message)
+	messagesOut = append(messagesOut, messageResult.MessagesOut...)
 	if messageResult.NewMode != ExistingMode {
-		i.changeMode(messageResult.NewMode, messageResult.NewTerm)
+		messages := i.changeMode(messageResult.NewMode, messageResult.NewTerm)
+		messagesOut = append(messagesOut, messages...)
 	}
+
+	return messagesOut
 }
 
 func (i *actorImpl) messageFromNewTerm(message Message) bool {
@@ -121,7 +129,7 @@ func (i *actorImpl) messageHasExpired(message Message) bool {
 	return message.Term < i.persistentStorage.CurrentTerm()
 }
 
-func (i *actorImpl) changeMode(newMode ActorMode, newTerm Term) {
+func (i *actorImpl) changeMode(newMode ActorMode, newTerm Term) []Message {
 	log.Printf("Change mode %d(%d) -> %d(%d)", i.mode, i.persistentStorage.CurrentTerm(), newMode, newTerm)
 
 	if newTerm != i.persistentStorage.CurrentTerm() {
@@ -131,7 +139,7 @@ func (i *actorImpl) changeMode(newMode ActorMode, newTerm Term) {
 
 	i.currentModeStrategy().Exit()
 	i.mode = newMode
-	i.currentModeStrategy().Enter()
+	return i.currentModeStrategy().Enter()
 }
 
 func (i *actorImpl) currentModeStrategy() actorModeStrategy {

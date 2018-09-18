@@ -15,9 +15,16 @@ List of TODOs that I would like to get around to doing in this codebase:
  - [RAFT] Writing an actual storage backend, and handle issues around ensuring data is actually persisted (flush to disk)
  - [RAFT] Raft optionals proposed by [1] (membership changes, compaction)
  - [RAFT] Automatic redirection - allow clients to talk to any node
- - [GO] Refactor package layout to provide a nicer library interface
- - [GO] Implement example servers w/ config loading, CLI tools, gRPC requests, etc.
  - [GO] Experiment with godoc and generate proper documentation for package
  - [TESTING] Catch and replay of events for debugging/crash analysis in some practical way
 
 [1] https://github.com/ongardie/dissertation#readme
+
+Development
+-----------
+
+The following dependencies are required when working on this codebase:
+
+ go get -u github.com/golang/protobuf/protoc-gen-go
+ brew install protobuf
+ brew install dep

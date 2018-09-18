@@ -11,7 +11,7 @@ type Config struct {
 	LeaderElectionTimeout      Tick
 	LeaderElectionTimeoutSplay Tick
 
-	// Number of ticks between each Leader heartbeat. Should be strictly less than
+	// Number of ticks between each Leader createHeartbeatMessage. Should be strictly less than
 	// the LeaderElectionTimeout to avoid spurious leader elections.
 	LeaderHeartbeatFrequency Tick
 }

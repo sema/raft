@@ -7,7 +7,6 @@ import (
 type candidateMode struct {
 	persistentStorage Storage
 	volatileStorage   *VolatileStorage
-	gateway           ServerGateway
 	config            Config
 
 	ticksSinceLastHeartbeat  Tick
@@ -16,11 +15,10 @@ type candidateMode struct {
 	votes map[ServerID]bool
 }
 
-func newCandidateMode(persistentStorage Storage, volatileStorage *VolatileStorage, gateway ServerGateway, config Config) actorModeStrategy {
+func newCandidateMode(persistentStorage Storage, volatileStorage *VolatileStorage, config Config) actorModeStrategy {
 	return &candidateMode{
 		persistentStorage: persistentStorage,
 		volatileStorage:   volatileStorage,
-		gateway:           gateway,
 		config:            config,
 	}
 }
@@ -72,8 +70,9 @@ func (s *candidateMode) handleRequestVote(message Message) (result *MessageResul
 	// Multiple candidates in same Term. stateContext always votes for itself when entering CandidateMode state, so
 	// skip voting process.
 
-	s.gateway.Send(message.From, NewMessageVoteForResponse(message.From, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), false))
-	return newMessageResult()
+	result = newMessageResult()
+	result.WithMessage(NewMessageVoteForResponse(message.From, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), false))
+	return result
 }
 
 func (s *candidateMode) handleRequestVoteResponse(message Message) (result *MessageResult) {
@@ -100,7 +99,7 @@ func (s *candidateMode) handleRequestVoteResponse(message Message) (result *Mess
 	return newMessageResult()
 }
 
-func (s *candidateMode) Enter() {
+func (s *candidateMode) Enter() (messagesOut []Message) {
 	s.ticksSinceLastHeartbeat = 0
 	s.ticksUntilLeaderElection = getTicksWithSplay(s.config.LeaderElectionTimeout, s.config.LeaderElectionTimeoutSplay)
 
@@ -122,8 +121,15 @@ func (s *candidateMode) Enter() {
 
 		logEntry := s.persistentStorage.LatestLogEntry()
 
-		s.gateway.Send(serverID, NewMessageVoteFor(serverID, s.volatileStorage.ServerID, s.persistentStorage.CurrentTerm(), logEntry.Index, logEntry.Term))
+		messagesOut = append(messagesOut, NewMessageVoteFor(
+			serverID,
+			s.volatileStorage.ServerID,
+			s.persistentStorage.CurrentTerm(),
+			logEntry.Index,
+			logEntry.Term))
 	}
+
+	return messagesOut
 }
 
 func (s *candidateMode) Exit() {

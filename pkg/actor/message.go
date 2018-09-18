@@ -1,6 +1,6 @@
 package actor
 
-type messageKind string
+type MessageKind string
 
 const (
 	// Replicate log entries from leader to followers + leader heartbeats
@@ -20,7 +20,7 @@ const (
 
 type Message struct {
 	// Kind of message
-	Kind messageKind
+	Kind MessageKind
 
 	// Sender/receiver actor
 	From ServerID

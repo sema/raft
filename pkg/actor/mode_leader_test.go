@@ -5,27 +5,24 @@ import (
 
 	"github.com/sema/raft/pkg/actor"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEnter__LeaderSendsHeartbeatsToAllPeersUponElection(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	// Assertions that heartbeats are sent are in test function
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 }
 
 func TestAppendEntries__LeaderTransitionsToFollowerIfNewLeaderIsDetected(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	assert.Equal(t, actor.Term(1), storage.CurrentTerm())
-
-	gatewayMock.EXPECT().Send(gomock.Any(), gomock.Any())
 
 	act.Process(actor.NewMessageAppendEntries(
 		localServerID, peerServer1ID, actor.Term(2), 0, 0, 0, nil))
@@ -35,7 +32,7 @@ func TestAppendEntries__LeaderTransitionsToFollowerIfNewLeaderIsDetected(t *test
 }
 
 func TestAppendEntries__LeaderRepeatsHeartbeatsWithDecrementingPrevPointUntilFollowersAck(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	storage.AppendLog("") // index 1, term 0
@@ -43,24 +40,27 @@ func TestAppendEntries__LeaderRepeatsHeartbeatsWithDecrementingPrevPointUntilFol
 	storage.AppendLog("") // index 3, term 0
 	storage.AppendLog("") // index 4, term 0
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	for i := 3; i >= 1; i-- {
 		// Reject responses should decrease prev point
-		gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-			peerServer1ID, localServerID, actor.Term(1), 0, actor.LogIndex(i), 0, nil))
-		gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-			peerServer2ID, localServerID, actor.Term(1), 0, actor.LogIndex(i), 0, nil))
 
-		act.Process(actor.NewMessageAppendEntriesResponse(
+		messageExpected := []actor.Message{
+			actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), 0, actor.LogIndex(i), 0, nil)}
+		messageOut := act.Process(actor.NewMessageAppendEntriesResponse(
 			localServerID, peerServer1ID, 1, false, 0))
-		act.Process(actor.NewMessageAppendEntriesResponse(
+		assert.Equal(t, messageExpected, messageOut)
+
+		messageExpected = []actor.Message{
+			actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), 0, actor.LogIndex(i), 0, nil)}
+		messageOut = act.Process(actor.NewMessageAppendEntriesResponse(
 			localServerID, peerServer2ID, 1, false, 0))
+		assert.Equal(t, messageExpected, messageOut)
 	}
 }
 
 func TestAppendEntries__MatchAndNextIndexAreUpdatedAccordinglyOnSuccessfulAppendEntriesResponse(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	storage.AppendLog("") // index 1, term 0
@@ -68,39 +68,40 @@ func TestAppendEntries__MatchAndNextIndexAreUpdatedAccordinglyOnSuccessfulAppend
 	storage.AppendLog("") // index 3, term 0
 	storage.AppendLog("") // index 4, term 0
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	act.Process(actor.NewMessageAppendEntriesResponse(
 		localServerID, peerServer1ID, 1, true, 4))
 	act.Process(actor.NewMessageAppendEntriesResponse(
 		localServerID, peerServer2ID, 1, true, 4))
 
-	gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-		peerServer1ID, localServerID, actor.Term(1), 4, 4, 0, nil))
-	gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-		peerServer2ID, localServerID, actor.Term(1), 4, 4, 0, nil))
+	messagesExpected := []actor.Message{
+		actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), 4, 4, 0, nil),
+		actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), 4, 4, 0, nil),
+	}
+	messagesOut := testProgressTime(act, 5)
 
-	testProgressTime(act, 5)
+	assert.Equal(t, messagesExpected, messagesOut)
 }
 
 func TestTick__SendsHeartbeatPeriodically(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	for i := 0; i < 3; i++ {
-		gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-			peerServer1ID, localServerID, actor.Term(1), 0, 0, 0, nil))
-		gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-			peerServer2ID, localServerID, actor.Term(1), 0, 0, 0, nil))
-
-		testProgressTime(act, 5)
+		messagesExpected := []actor.Message{
+			actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), 0, 0, 0, nil),
+			actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), 0, 0, 0, nil),
+		}
+		messagesOut := testProgressTime(act, 5)
+		assert.Equal(t, messagesExpected, messagesOut)
 	}
 }
 
 func TestTick__CommitIndexIsIncreasedWhenChangeIsReplicatedToMajority(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	storage.AppendLog("") // index 1, term 0
@@ -108,7 +109,7 @@ func TestTick__CommitIndexIsIncreasedWhenChangeIsReplicatedToMajority(t *testing
 	storage.AppendLog("") // index 3, term 0
 	storage.AppendLog("") // index 4, term 0
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	act.Process(actor.NewMessageAppendEntriesResponse(
 		localServerID, peerServer1ID, 1, true, 4))
@@ -117,16 +118,16 @@ func TestTick__CommitIndexIsIncreasedWhenChangeIsReplicatedToMajority(t *testing
 
 	expectedCommitIndex := actor.LogIndex(4)
 
-	gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-		peerServer1ID, localServerID, actor.Term(1), expectedCommitIndex, 4, 0, nil))
-	gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-		peerServer2ID, localServerID, actor.Term(1), expectedCommitIndex, 4, 0, nil))
-
-	testProgressTime(act, 5)
+	messagesExpected := []actor.Message{
+		actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), expectedCommitIndex, 4, 0, nil),
+		actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), expectedCommitIndex, 4, 0, nil),
+	}
+	messagesOut := testProgressTime(act, 5)
+	assert.Equal(t, messagesExpected, messagesOut)
 }
 
 func TestTick__CommitIndexIsNewerIncreasedBeyondMatchIndex(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	storage.AppendLog("") // index 1, term 0
@@ -134,25 +135,25 @@ func TestTick__CommitIndexIsNewerIncreasedBeyondMatchIndex(t *testing.T) {
 	storage.AppendLog("") // index 3, term 0
 	storage.AppendLog("") // index 4, term 0
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	act.Process(actor.NewMessageAppendEntriesResponse(
 		localServerID, peerServer1ID, 1, true, 4))
 	act.Process(actor.NewMessageAppendEntriesResponse(
 		localServerID, peerServer2ID, 1, true, 3))
 
-	gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-		peerServer1ID, localServerID, actor.Term(1), 4, 4, 0, nil))
-	gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-		peerServer2ID, localServerID, actor.Term(1), 3, 3, 0, []actor.LogEntry{
-			actor.NewLogEntry(0, 4, ""),
-		}))
+	messagesExpected := []actor.Message{
+		actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), 4, 4, 0, nil),
+		actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), 3, 3, 0,
+			[]actor.LogEntry{actor.NewLogEntry(0, 4, "")}),
+	}
 
-	testProgressTime(act, 5)
+	messagesOut := testProgressTime(act, 5)
+	assert.Equal(t, messagesExpected, messagesOut)
 }
 
 func TestProposal__ProposalsAppendToLocalLog(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	storage.AppendLog("") // index 1, term 0
@@ -160,7 +161,7 @@ func TestProposal__ProposalsAppendToLocalLog(t *testing.T) {
 	storage.AppendLog("") // index 3, term 0
 	storage.AppendLog("") // index 4, term 0
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 
 	act.Process(actor.NewMessageProposal(localServerID, localServerID, ""))
 
@@ -168,7 +169,7 @@ func TestProposal__ProposalsAppendToLocalLog(t *testing.T) {
 }
 
 func TestProposal__ProposalsAreReplicatedOnHeartbeat(t *testing.T) {
-	act, gatewayMock, storage, cleanup := newActorTestSetup(t)
+	act, storage, cleanup := newActorTestSetup(t)
 	defer cleanup()
 
 	storage.AppendLog("") // index 1, term 0
@@ -176,7 +177,7 @@ func TestProposal__ProposalsAreReplicatedOnHeartbeat(t *testing.T) {
 	storage.AppendLog("") // index 3, term 0
 	storage.AppendLog("") // index 4, term 0
 
-	testTransitionFromFollowerToLeader(act, gatewayMock, storage)
+	testTransitionFromFollowerToLeader(t, act, storage)
 	testFollowersReplicateUp(act, storage)
 
 	act.Process(actor.NewMessageProposal(localServerID, localServerID, ""))
@@ -185,11 +186,11 @@ func TestProposal__ProposalsAreReplicatedOnHeartbeat(t *testing.T) {
 		actor.NewLogEntry(1, 5, ""),
 	}
 
-	gatewayMock.EXPECT().Send(peerServer1ID, actor.NewMessageAppendEntries(
-		peerServer1ID, localServerID, actor.Term(1), 4, 4, 0, logEntries))
-	gatewayMock.EXPECT().Send(peerServer2ID, actor.NewMessageAppendEntries(
-		peerServer2ID, localServerID, actor.Term(1), 4, 4, 0, logEntries))
-
-	testProgressTime(act, 5)
+	messagesExpected := []actor.Message{
+		actor.NewMessageAppendEntries(peerServer1ID, localServerID, actor.Term(1), 4, 4, 0, logEntries),
+		actor.NewMessageAppendEntries(peerServer2ID, localServerID, actor.Term(1), 4, 4, 0, logEntries),
+	}
+	messagesOut := testProgressTime(act, 5)
+	assert.Equal(t, messagesExpected, messagesOut)
 
 }
