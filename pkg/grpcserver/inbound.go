@@ -1,6 +1,7 @@
 package grpcserver
 
 import (
+	"context"
 	"io"
 	"net"
 
@@ -25,6 +26,12 @@ func NewInboundGRPCServer(server server.Server) *InboundGRPCServer {
 	return &InboundGRPCServer{
 		server: server,
 	}
+}
+
+func (s *InboundGRPCServer) GetStatus(context.Context, *pb.StatusRequest) (*pb.StatusResponse, error) {
+	return &pb.StatusResponse{
+		State: s.server.CurrentStateName(),
+	}, nil
 }
 
 func (s *InboundGRPCServer) SendMessages(stream pb.SRServer_SendMessagesServer) error {

@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var flagRemoteAddress string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "srctl",
@@ -21,4 +23,10 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&flagRemoteAddress, "server", "", "address of remote server, e.g. 127.0.0.1:8000")
+
+	rootCmd.MarkFlagRequired("server")
 }

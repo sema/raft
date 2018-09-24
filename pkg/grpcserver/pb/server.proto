@@ -35,6 +35,15 @@ message SendMessagesResponse {
 
 }
 
+message StatusResponse {
+    string state = 1;
+}
+
+message StatusRequest {
+
+}
+
 service SRServer {
+    rpc GetStatus(StatusRequest) returns (StatusResponse) {}
     rpc SendMessages(stream Message) returns (SendMessagesResponse) {}
 }
