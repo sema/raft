@@ -17,6 +17,7 @@ List of TODOs that I would like to get around to doing in this codebase:
  - [RAFT] Automatic redirection - allow clients to talk to any node
  - [GO] Experiment with godoc and generate proper documentation for package
  - [TESTING] Catch and replay of events for debugging/crash analysis in some practical way
+ - [PACKAGE] Add status/debug page
 
 [1] https://github.com/ongardie/dissertation#readme
 
