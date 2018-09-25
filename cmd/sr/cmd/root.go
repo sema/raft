@@ -11,11 +11,8 @@ import (
 	"github.com/sema/raft/pkg/grpcserver"
 	"github.com/sema/raft/pkg/server"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
-
-var serverAddresses []string
-var localServerAddress string
-var localServerID string
 
 var rootCmd = &cobra.Command{
 	Use:   "sr",
@@ -25,6 +22,27 @@ var rootCmd = &cobra.Command{
 The command starts a SR server node and blocks until the server exits.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		localServerID := viper.GetString("name")
+		localServerAddress := viper.GetString("listen")
+		serverAddresses := viper.GetStringSlice("server")
+
+		// This is not necessarily the most stellar interface, and error handling is lacking. Will make do for now.
+		// TODO replace cobra & viper with urfave/cli and see if that provides a nicer interface
+		if localServerID == "" {
+			fmt.Println("--name is required")
+			os.Exit(1)
+		}
+
+		if localServerAddress == "" {
+			fmt.Println("--listen is required")
+			os.Exit(1)
+		}
+
+		if len(serverAddresses) == 0 {
+			fmt.Println("--server is required")
+			os.Exit(1)
+		}
+
 		var allServers []actor.ServerID
 		discovery := make(map[actor.ServerID]grpcserver.DiscoveryConfig)
 
@@ -79,11 +97,15 @@ func Execute() {
 }
 
 func init() {
-	// TODO this is not necessarily the most stellar interface, and error handling is lacking. Will make do for now.
-	rootCmd.Flags().StringArrayVar(&serverAddresses, "server", []string{}, "remote server address, specified in the form {name}={ip}:{port}")
-	rootCmd.Flags().StringVar(&localServerID, "name", "", "name of local server")
-	rootCmd.Flags().StringVar(&localServerAddress, "address", "", "address to bind local server to, specified in the form tcp:{ip}:{port}")
+	viper.AutomaticEnv() // Read environment variables when looking up config
+	viper.SetEnvPrefix("SR")
 
-	rootCmd.MarkFlagRequired("name")
-	rootCmd.MarkFlagRequired("address")
+	rootCmd.Flags().StringArray("server", []string{}, "remote server address, specified in the form {name}={ip}:{port}. Can also be set through the environment variable SR_SERVER (e.g. SR_SERVER=\"svc1=127.0.0.1:8000 svc2=127.0.0.1:8000\").")
+	viper.BindPFlag("server", rootCmd.Flags().Lookup("server"))
+
+	rootCmd.Flags().String("name", "", "name of local server Can also bet set through the environment variable SR_NAME.")
+	viper.BindPFlag("name", rootCmd.Flags().Lookup("name"))
+
+	rootCmd.Flags().String("listen", "", "address to bind local server to, specified in the form tcp:{ip}:{port}. Can also be set through the environment variable SR_LISTEN.")
+	viper.BindPFlag("listen", rootCmd.Flags().Lookup("listen"))
 }
